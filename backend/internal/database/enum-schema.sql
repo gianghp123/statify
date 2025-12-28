@@ -1,0 +1,2 @@
+CREATE TYPE deployment_status AS ENUM ('FAILED', 'UPLOADED', 'READY', 'DELETED');
+CREATE TYPE role as ENUM ('ADMIN', 'USER');
