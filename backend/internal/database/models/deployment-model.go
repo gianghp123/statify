@@ -1,13 +1,16 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"github.com/gianghp/statify/internal/core/enums"
+	"gorm.io/gorm"
+)
 
 type Deployment struct {
 	gorm.Model
 	ProjectID          uint
 	Project            Project
-	Status             string `gorm:"default:'PENDING'"`
-	OutputPrefix       string `gorm:"not null"`
-	SourceZipObjectKey string `gorm:"not null"`
+	Status             enums.DeploymentStatus `gorm:"default:'UPLOADED';type:deployment_status"`
+	OutputPrefix       string                 `gorm:"not null"`
+	SourceZipObjectKey string                 `gorm:"not null"`
 	ValidationError    string
 }
