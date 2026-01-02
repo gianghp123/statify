@@ -4,15 +4,13 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type DeploymentModule struct {
 	controller *DeploymentController
 }
 
-func NewDeploymentModule(db *gorm.DB) *DeploymentModule {
-	repo := repository.NewDeploymentRepository(db)
+func NewDeploymentModule(repo repository.IDeploymentRepository) *DeploymentModule {
 	svc := service.NewDeploymentService(repo)
 	ctrl := NewDeploymentController(svc)
 

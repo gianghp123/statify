@@ -4,15 +4,13 @@ import (
 	"github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/modules/project/service"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type ProjectModule struct {
 	controller *ProjectController
 }
 
-func NewProjectModule(db *gorm.DB) *ProjectModule {
-	repo := repository.NewProjectRepository(db)
+func NewProjectModule(repo repository.IProjectRepository) *ProjectModule {
 	svc := service.NewProjectService(repo)
 	ctrl := NewProjectController(svc)
 
