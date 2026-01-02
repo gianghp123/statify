@@ -5,6 +5,7 @@ import "database/sql/driver"
 type DeploymentStatus string
 
 const (
+	DeploymentStatusQueued   DeploymentStatus = "QUEUED"
 	DeploymentStatusFailed   DeploymentStatus = "FAILED"
 	DeploymentStatusUploaded DeploymentStatus = "UPLOADED"
 	DeploymentStatusReady    DeploymentStatus = "READY"

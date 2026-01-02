@@ -4,7 +4,7 @@ info:
   description: API for managing projects and static site deployments.
   version: "1.0.0"
 servers:
-  - url: /api
+  - url: /api/v1
 paths:
   /auth/register:
     post:

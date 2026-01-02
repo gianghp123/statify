@@ -1,5 +1,11 @@
 package core
 
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
 type ApiError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -16,34 +22,54 @@ func NewApiError(code int, message string) *ApiError {
 	}
 }
 
-func BadRequestError() *ApiError {
-	return NewApiError(400, "Bad Request")
+func BadRequestError(message ...string) *ApiError {
+	msg := "Bad Request"
+	if len(message) > 0 && message[0] != "" {
+		msg = message[0]
+	}
+	return NewApiError(http.StatusBadRequest, msg)
 }
 
 func NotFoundError() *ApiError {
-	return NewApiError(404, "Not Found")
+	return NewApiError(http.StatusNotFound, "Not Found")
+}
+
+func ConflictError(messages ...string) *ApiError {
+	msg := "Conflict"
+	if len(messages) > 0 && messages[0] != "" {
+		msg = messages[0]
+	}
+	return NewApiError(http.StatusConflict, msg)
 }
 
 func UnauthorizedError() *ApiError {
-	return NewApiError(401, "Unauthorized")
+	return NewApiError(http.StatusUnauthorized, "Unauthorized")
 }
 
 func ForbiddenError() *ApiError {
-	return NewApiError(403, "Forbidden")
+	return NewApiError(http.StatusForbidden, "Forbidden")
 }
 
 func InternalError() *ApiError {
-	return NewApiError(500, "Internal Server Error")
+	return NewApiError(http.StatusInternalServerError, "Internal Server Error")
 }
 
 func NotImplementedError() *ApiError {
-	return NewApiError(501, "Not Implemented")
+	return NewApiError(http.StatusNotImplemented, "Not Implemented")
 }
 
 func BadGatewayError() *ApiError {
-	return NewApiError(502, "Bad Gateway")
+	return NewApiError(http.StatusBadGateway, "Bad Gateway")
 }
 
 func ServiceUnavailableError() *ApiError {
-	return NewApiError(503, "Service Unavailable")
+	return NewApiError(http.StatusServiceUnavailable, "Service Unavailable")
+}
+
+func HandleApiError(ctx *gin.Context, err error) {
+	if apiErr, ok := err.(*ApiError); ok {
+		ctx.JSON(apiErr.Code, apiErr)
+		return
+	}
+	ctx.JSON(http.StatusInternalServerError, InternalError())
 }

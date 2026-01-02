@@ -9,3 +9,11 @@ func EntityToDto[T any](entity interface{}) (*T, error) {
 	}
 	return &dto, nil
 }
+
+func EntitiesToDto[T any](entities interface{}) ([]*T, error) {
+	var dtos []*T
+	if err := copier.Copy(&dtos, entities); err != nil {
+		return nil, err
+	}
+	return dtos, nil
+}
