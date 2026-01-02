@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
@@ -23,16 +24,24 @@ func (s *DeploymentService) CreateDeployment(projectID uint, req *request.Create
 	}
 
 	if err := s.repo.Create(deployment); err != nil {
-		return nil, err
+		return nil, core.ParseDatabaseError(err)
 	}
 
 	return deployment, nil
 }
 
 func (s *DeploymentService) GetHistory(projectID uint) (*coreRepo.PaginatedEntities[models.Deployment], error) {
-	return s.repo.FindAllByProjectID(projectID)
+	deployments, err := s.repo.FindAllByProjectID(projectID)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+	return deployments, nil
 }
 
 func (s *DeploymentService) GetDeploymentByID(id uint) (*models.Deployment, error) {
-	return s.repo.FindByID(id)
+	deployment, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+	return deployment, nil
 }

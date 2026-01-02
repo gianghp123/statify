@@ -24,6 +24,6 @@ func (m *ProjectModule) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		projects.GET("", m.controller.ListProjects)
 		projects.POST("", m.controller.CreateProject)
-		projects.GET("/:id", m.controller.GetProject)
+		projects.GET("/:project_id", m.controller.GetProject)
 	}
 }

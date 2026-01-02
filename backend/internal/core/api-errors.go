@@ -1,9 +1,11 @@
 package core
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type ApiError struct {
@@ -64,6 +66,22 @@ func BadGatewayError() *ApiError {
 
 func ServiceUnavailableError() *ApiError {
 	return NewApiError(http.StatusServiceUnavailable, "Service Unavailable")
+}
+
+func ParseDatabaseError(err error) *ApiError {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return NotFoundError()
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return ConflictError("Record already exists")
+	}
+	if errors.Is(err, gorm.ErrForeignKeyViolated) {
+		return BadRequestError("Foreign key violation")
+	}
+	return InternalError()
 }
 
 func HandleApiError(ctx *gin.Context, err error) {

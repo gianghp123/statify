@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/gianghp/statify/internal/core"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
@@ -23,16 +24,24 @@ func (s *ProjectService) CreateProject(userID uint, req *request.CreateProjectRe
 	}
 
 	if err := s.repo.Create(project); err != nil {
-		return nil, err
+		return nil, core.ParseDatabaseError(err)
 	}
 
 	return project, nil
 }
 
 func (s *ProjectService) ListProjects(userID uint) (*coreRepo.PaginatedEntities[models.Project], error) {
-	return s.repo.FindAllByUserID(userID)
+	projects, err := s.repo.FindAllByUserID(userID)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+	return projects, nil
 }
 
 func (s *ProjectService) GetProjectByID(id uint) (*models.Project, error) {
-	return s.repo.FindByID(id)
+	project, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+	return project, nil
 }

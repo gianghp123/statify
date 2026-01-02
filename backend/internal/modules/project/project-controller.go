@@ -66,7 +66,7 @@ func (c *ProjectController) CreateProject(ctx *gin.Context) {
 }
 
 func (c *ProjectController) GetProject(ctx *gin.Context) {
-	idStr := ctx.Param("id")
+	idStr := ctx.Param("project_id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		core.HandleApiError(ctx, core.BadRequestError("Invalid project ID"))
