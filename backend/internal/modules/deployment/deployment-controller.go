@@ -6,7 +6,6 @@ import (
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
-	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -21,6 +20,12 @@ func NewDeploymentController(service *service.DeploymentService) *DeploymentCont
 }
 
 func (c *DeploymentController) GetHistory(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
 	projectIDStr := ctx.Param("project_id")
 	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
 	if err != nil {
@@ -28,22 +33,22 @@ func (c *DeploymentController) GetHistory(ctx *gin.Context) {
 		return
 	}
 
-	deployments, err := c.service.GetHistory(uint(projectID))
+	deployments, err := c.service.GetHistory(ctx, userID, uint(projectID))
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return
 	}
 
-	deploymentDtos, err := utils.EntitiesToDto[response.DeploymentDto](deployments.Entities)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
-		return
-	}
-
-	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Deployment history retrieved successfully", deploymentDtos, &deployments.Pagination))
+	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Deployment history retrieved successfully", deployments.Entities, &deployments.Pagination))
 }
 
 func (c *DeploymentController) CreateDeployment(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
 	projectIDStr := ctx.Param("project_id")
 	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
 	if err != nil {
@@ -57,15 +62,9 @@ func (c *DeploymentController) CreateDeployment(ctx *gin.Context) {
 		return
 	}
 
-	deployment, err := c.service.CreateDeployment(uint(projectID), &req)
+	deploymentDto, err := c.service.CreateDeployment(ctx, userID, uint(projectID), &req)
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
-	}
-
-	deploymentDto, err := utils.EntityToDto[response.DeploymentDto](deployment)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
 		return
 	}
 
@@ -73,6 +72,12 @@ func (c *DeploymentController) CreateDeployment(ctx *gin.Context) {
 }
 
 func (c *DeploymentController) GetStatus(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
@@ -80,20 +85,9 @@ func (c *DeploymentController) GetStatus(ctx *gin.Context) {
 		return
 	}
 
-	deployment, err := c.service.GetDeploymentByID(uint(id))
+	deploymentDto, err := c.service.GetDeploymentByID(ctx, userID, uint(id))
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
-	}
-
-	if deployment == nil {
-		core.HandleApiError(ctx, core.NotFoundError())
-		return
-	}
-
-	deploymentDto, err := utils.EntityToDto[response.DeploymentDto](deployment)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
 		return
 	}
 

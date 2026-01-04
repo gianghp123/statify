@@ -40,11 +40,6 @@ const items = [
     icon: Rocket,
   },
   {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,

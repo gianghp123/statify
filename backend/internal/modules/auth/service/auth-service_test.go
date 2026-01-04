@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/dtos/request"
+	userResponse "github.com/gianghp/statify/internal/modules/user/dtos/response"
 	"github.com/gianghp/statify/internal/modules/user/repository"
 	"github.com/gianghp/statify/internal/utils/bcrypt"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +21,7 @@ func TestAuthService_Register(t *testing.T) {
 		name         string
 		request      *request.RegisterRequest
 		setupMocks   func(repo *repository.UserRepositoryMock, bcrypt *bcrypt.BcryptUtilsMock)
-		expectedFunc func(t *testing.T, user *models.User, err error)
+		expectedFunc func(t *testing.T, user *userResponse.UserDto, err error)
 	}{
 		{
 			name: "Register successfully",
@@ -29,22 +31,21 @@ func TestAuthService_Register(t *testing.T) {
 				Username: "test",
 			},
 			setupMocks: func(repo *repository.UserRepositoryMock, bcrypt *bcrypt.BcryptUtilsMock) {
-				repo.On("FindByEmail", mock.Anything, mock.Anything).Return((*models.User)(nil), nil)
+				repo.On("FindByEmail", mock.Anything, "test@gmail.com").Return((*models.User)(nil), nil)
 				bcrypt.On("HashPassword", "password").Return("hashed-password", nil)
-				repo.On("Create", mock.MatchedBy(func(u *models.User) bool {
+				repo.On("Create", mock.Anything, mock.MatchedBy(func(u *models.User) bool {
 					return u.Email == "test@gmail.com" &&
 						u.Username == "test" &&
 						u.PasswordHash == "hashed-password" &&
 						u.Role == string(enums.UserRoleUser)
 				})).Return(nil)
 			},
-			expectedFunc: func(t *testing.T, user *models.User, err error) {
+			expectedFunc: func(t *testing.T, user *userResponse.UserDto, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, user)
 				assert.Equal(t, "test@gmail.com", user.Email)
 				assert.Equal(t, "test", user.Username)
 				assert.Equal(t, string(enums.UserRoleUser), user.Role)
-				assert.Equal(t, "hashed-password", user.PasswordHash)
 			},
 		},
 		{
@@ -55,7 +56,7 @@ func TestAuthService_Register(t *testing.T) {
 				Username: "test",
 			},
 			setupMocks: nil,
-			expectedFunc: func(t *testing.T, user *models.User, err error) {
+			expectedFunc: func(t *testing.T, user *userResponse.UserDto, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, user)
 			},
@@ -68,7 +69,7 @@ func TestAuthService_Register(t *testing.T) {
 				Username: "test",
 			},
 			setupMocks: nil,
-			expectedFunc: func(t *testing.T, user *models.User, err error) {
+			expectedFunc: func(t *testing.T, user *userResponse.UserDto, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, user)
 			},
@@ -85,7 +86,7 @@ func TestAuthService_Register(t *testing.T) {
 			}
 
 			authService := NewAuthService(repo, bcrypt, nil)
-			user, err := authService.Register(tt.request)
+			user, err := authService.Register(context.TODO(), tt.request)
 
 			tt.expectedFunc(t, user, err)
 
@@ -109,7 +110,7 @@ func TestAuthService_Login(t *testing.T) {
 				Password: "password",
 			},
 			setupMocks: func(repo *repository.UserRepositoryMock, bcrypt *bcrypt.BcryptUtilsMock, jwt *JwtServiceMock) {
-				repo.On("FindByEmail", mock.Anything, mock.Anything).Return(&models.User{
+				repo.On("FindByEmail", mock.Anything, "test@gmail.com").Return(&models.User{
 					Model: gorm.Model{
 						ID: 1,
 					},
@@ -137,7 +138,7 @@ func TestAuthService_Login(t *testing.T) {
 				Password: "password",
 			},
 			setupMocks: func(repo *repository.UserRepositoryMock, bcrypt *bcrypt.BcryptUtilsMock, jwt *JwtServiceMock) {
-				repo.On("FindByEmail", mock.Anything, mock.Anything).Return((*models.User)(nil), gorm.ErrRecordNotFound)
+				repo.On("FindByEmail", mock.Anything, "test").Return((*models.User)(nil), gorm.ErrRecordNotFound)
 			},
 			expectedFunc: func(t *testing.T, authResult *AuthResult, err error) {
 				assert.Error(t, err)
@@ -151,7 +152,7 @@ func TestAuthService_Login(t *testing.T) {
 				Password: "pass",
 			},
 			setupMocks: func(repo *repository.UserRepositoryMock, bcrypt *bcrypt.BcryptUtilsMock, jwt *JwtServiceMock) {
-				repo.On("FindByEmail", mock.Anything, mock.Anything).Return(&models.User{
+				repo.On("FindByEmail", mock.Anything, "test@gmail.com").Return(&models.User{
 					Model: gorm.Model{
 						ID: 1,
 					},
@@ -180,7 +181,7 @@ func TestAuthService_Login(t *testing.T) {
 			}
 
 			authService := NewAuthService(repo, bcrypt, jwt)
-			authResult, err := authService.Login(tt.request)
+			authResult, err := authService.Login(context.TODO(), tt.request)
 
 			tt.expectedFunc(t, authResult, err)
 

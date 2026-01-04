@@ -3,10 +3,32 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Database, Mail, Lock, ArrowRight } from "lucide-react";
+import { Database, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { register } from "../services/auth.actions";
+import { useAction } from "@/hooks/use-action";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function RegisterForm() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { execute, isPending } = useAction(register, {
+    onSuccess: () => {
+      toast.success("Registration successful! Please login.");
+      router.push("/login");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    execute({ username, email, password });
+  };
+
   return (
     <div className="glass-panel w-full max-w-[380px] rounded-xl p-8 flex flex-col gap-6 relative shadow-2xl shadow-black/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-center mb-2">
@@ -48,7 +70,24 @@ export function RegisterForm() {
         <div className="flex-grow border-t border-white/10"></div>
       </div>
 
-      <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <div className="flex flex-col gap-1.5 group">
+          <Label htmlFor="username" className="text-white text-sm font-medium pl-1">
+            Username
+          </Label>
+          <div className="relative">
+            <Input
+              id="username"
+              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 px-4 text-sm transition-all duration-300 shadow-sm"
+              placeholder="johndoe"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isPending}
+              required
+            />
+          </div>
+        </div>
         <div className="flex flex-col gap-1.5 group">
           <Label className="text-white text-sm font-medium pl-1">
             Email Address
@@ -61,6 +100,10 @@ export function RegisterForm() {
               className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
               placeholder="name@example.com"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isPending}
+              required
             />
           </div>
         </div>
@@ -76,15 +119,26 @@ export function RegisterForm() {
               className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
               placeholder="••••••••"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isPending}
+              required
             />
           </div>
         </div>
         <Button
           className="mt-2 w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-[#d4ff33] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(204,255,0,0.3)]"
-          type="button"
+          type="submit"
+          disabled={isPending}
         >
-          <span>Get Started</span>
-          <ArrowRight className="w-[18px] h-[18px]" />
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <span>Get Started</span>
+              <ArrowRight className="w-[18px] h-[18px]" />
+            </>
+          )}
         </Button>
       </form>
 

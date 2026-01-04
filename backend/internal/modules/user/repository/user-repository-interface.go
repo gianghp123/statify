@@ -1,13 +1,17 @@
 package repository
 
-import "github.com/gianghp/statify/internal/database/models"
+import (
+	"context"
+
+	"github.com/gianghp/statify/internal/database/models"
+)
 
 type IUserRepository interface {
-	FindByID(id uint) (*models.User, error)
-	FindAll() ([]*models.User, error)
-	FindByEmail(email string) (*models.User, error)
-	FindByUsername(username string) (*models.User, error)
-	Create(user *models.User) error
-	Update(user *models.User) error
-	Delete(user *models.User) error
+	FindByID(ctx context.Context, id uint) (*models.User, error)
+	FindAll(ctx context.Context) ([]*models.User, error)
+	FindByEmail(ctx context.Context, email string) (*models.User, error)
+	FindByUsername(ctx context.Context, username string) (*models.User, error)
+	Create(ctx context.Context, user *models.User) error
+	Update(ctx context.Context, user *models.User) error
+	Delete(ctx context.Context, user *models.User) error
 }

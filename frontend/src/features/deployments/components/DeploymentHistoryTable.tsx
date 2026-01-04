@@ -1,22 +1,25 @@
-import { MoreHorizontal, Rocket, FlaskConical, CheckCircle2, History } from "lucide-react";
+import { MoreHorizontal, Rocket, FlaskConical, History } from "lucide-react";
+import { DeploymentDto } from "../dtos/response/deployment.response.dto";
+import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "Ready":
+    case DeploymentStatus.READY:
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/20">
           <span className="size-1.5 rounded-full bg-primary"></span>
           Ready
         </span>
       );
-    case "Building":
+    case DeploymentStatus.QUEUED:
+    case DeploymentStatus.UPLOADED:
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-400/10 px-2.5 py-0.5 text-xs font-medium text-yellow-400 border border-yellow-400/20">
           <span className="size-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
           Building
         </span>
       );
-    case "Failed":
+    case DeploymentStatus.FAILED:
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-red-400/10 px-2.5 py-0.5 text-xs font-medium text-red-400 border border-red-400/20">
           <span className="size-1.5 rounded-full bg-red-400"></span>
@@ -24,38 +27,54 @@ const getStatusBadge = (status: string) => {
         </span>
       );
     default:
-      return null;
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/10 px-2.5 py-0.5 text-xs font-medium text-muted-foreground border border-muted/20">
+          <span className="size-1.5 rounded-full bg-muted-foreground"></span>
+          {status}
+        </span>
+      );
   }
 };
 
-const mockDeployments = [
-  {
-    id: "5f3a2b1",
-    commitMessage: "Update hero copy",
-    status: "Ready",
-    context: "Production",
-    createdAt: "2m ago",
-    duration: "45s",
-  },
-  {
-    id: "8c9d1e4",
-    commitMessage: "Fix typo in footer",
-    status: "Building",
-    context: "Preview",
-    createdAt: "5m ago",
-    duration: "--",
-  },
-  {
-    id: "2a1b5c9",
-    commitMessage: "Add analytics script",
-    status: "Failed",
-    context: "Preview",
-    createdAt: "2h ago",
-    duration: "1m 12s",
-  },
-];
+interface DeploymentHistoryTableProps {
+  deployments: DeploymentDto[];
+}
 
-export function DeploymentHistoryTable() {
+export function DeploymentHistoryTable({ deployments }: DeploymentHistoryTableProps) {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "--";
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return `${diffDays}d ago`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const calculateDuration = (start?: string, end?: string | null) => {
+    if (!start || !end) return "--";
+    try {
+      const s = new Date(start);
+      const e = new Date(end);
+      const diffMs = e.getTime() - s.getTime();
+      const diffSecs = Math.floor(diffMs / 1000);
+      if (diffSecs < 60) return `${diffSecs}s`;
+      const mins = Math.floor(diffSecs / 60);
+      const secs = diffSecs % 60;
+      return `${mins}m ${secs}s`;
+    } catch {
+      return "--";
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -78,56 +97,60 @@ export function DeploymentHistoryTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {mockDeployments.map((deployment) => (
-                <tr key={deployment.id} className="group hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-white text-xs bg-background border border-border px-1.5 py-0.5 rounded">
-                        {deployment.id}
-                      </span>
-                      <span className="text-muted-foreground truncate max-w-[150px] text-xs">
-                        {deployment.commitMessage}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(deployment.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                    <div className="flex items-center gap-1.5">
-                      {deployment.context === "Production" ? (
-                        <Rocket className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <FlaskConical className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      {deployment.context}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                    {deployment.createdAt}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                    {deployment.duration}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <button className="text-muted-foreground hover:text-white transition-colors p-1 rounded hover:bg-white/5">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
+              {deployments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">
+                    No deployments found for this project.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                deployments.map((deployment) => (
+                  <tr key={deployment.id} className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-white text-xs bg-background border border-border px-1.5 py-0.5 rounded">
+                          {deployment.id}
+                        </span>
+                        <span className="text-muted-foreground truncate max-w-[150px] text-xs">
+                          {deployment.sourceZipObjectKey?.split('/').pop() || "Manual upload"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(deployment.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Rocket className="w-4 h-4 text-muted-foreground" />
+                        Production
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                      {formatDate(deployment.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                      {calculateDuration(deployment.createdAt, deployment.finishedAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button className="text-muted-foreground hover:text-white transition-colors p-1 rounded hover:bg-white/5">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         <div className="border-t border-border bg-background/20 px-6 py-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            Showing 1-{mockDeployments.length} of 24 deployments
+            Showing {deployments.length} deployments
           </span>
           <div className="flex items-center gap-2">
             <button className="p-1 rounded text-muted-foreground hover:text-white hover:bg-border disabled:opacity-50" disabled>
               <span className="text-xs">Prev</span>
             </button>
-            <button className="p-1 rounded text-muted-foreground hover:text-white hover:bg-border">
+            <button className="p-1 rounded text-muted-foreground hover:text-white hover:bg-border disabled:opacity-50" disabled>
               <span className="text-xs">Next</span>
             </button>
           </div>

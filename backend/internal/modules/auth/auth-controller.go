@@ -6,7 +6,6 @@ import (
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/modules/auth/dtos/request"
 	"github.com/gianghp/statify/internal/modules/auth/service"
-	"github.com/gianghp/statify/internal/modules/user/dtos/response"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -26,16 +25,10 @@ func (c *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.service.Register(&request)
+	userDto, err := c.service.Register(ctx, &request)
 
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
-	}
-
-	userDto, err := utils.EntityToDto[response.UserDto](user)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
 		return
 	}
 
@@ -43,7 +36,19 @@ func (c *AuthController) Register(ctx *gin.Context) {
 }
 
 func (c *AuthController) Login(ctx *gin.Context) {
-	// TODO: Implement
+	var req request.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		core.HandleApiError(ctx, core.BadRequestError(err.Error()))
+		return
+	}
+
+	result, err := c.service.Login(ctx, &req)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewApiResponse(http.StatusOK, "Login successful", result))
 }
 
 func (c *AuthController) GitHubLogin(ctx *gin.Context) {
@@ -55,5 +60,17 @@ func (c *AuthController) GitHubCallback(ctx *gin.Context) {
 }
 
 func (c *AuthController) Me(ctx *gin.Context) {
-	// TODO: Implement
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	userDto, err := c.service.Me(ctx, userID)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewApiResponse(http.StatusOK, "User profile retrieved successfully", userDto))
 }

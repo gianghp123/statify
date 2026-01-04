@@ -1,6 +1,9 @@
 package enums
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"fmt"
+)
 
 type DeploymentStatus string
 
@@ -13,7 +16,18 @@ const (
 )
 
 func (p *DeploymentStatus) Scan(value interface{}) error {
-	*p = DeploymentStatus(value.([]byte))
+	if value == nil {
+		*p = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*p = DeploymentStatus(v)
+	case string:
+		*p = DeploymentStatus(v)
+	default:
+		return fmt.Errorf("unexpected type for DeploymentStatus: %T", value)
+	}
 	return nil
 }
 

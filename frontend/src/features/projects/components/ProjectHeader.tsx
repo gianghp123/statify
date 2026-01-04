@@ -1,4 +1,4 @@
-import { ExternalLink, Settings, ArrowUpRight } from "lucide-react";
+import { ExternalLink, Settings, ArrowUpRight, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -30,6 +30,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         </Link>
       </div>
       <div className="flex items-center gap-3">
+        <Button variant="outline" asChild className="h-10 px-4 rounded-lg border-border bg-card text-foreground font-medium text-sm hover:bg-accent hover:text-white transition-all flex items-center gap-2">
+          <Link href={`/projects/${project.id}/analytics`}>
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </Link>
+        </Button>
         <Button variant="outline" className="h-10 px-4 rounded-lg border-border bg-card text-foreground font-medium text-sm hover:bg-accent hover:text-white transition-all flex items-center gap-2">
           <Settings className="w-4 h-4" />
           Settings

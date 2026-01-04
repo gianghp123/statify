@@ -1,9 +1,9 @@
 package service
 
 import (
-	"errors"
 	"time"
 
+	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/utils"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
@@ -43,12 +43,12 @@ func (j *JwtService) Verify(tokenString string) (*jwt.MapClaims, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, core.UnauthorizedError()
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		return &claims, nil
 	} else {
-		return nil, errors.New("invalid token")
+		return nil, core.UnauthorizedError()
 	}
 }

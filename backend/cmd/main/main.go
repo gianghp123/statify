@@ -8,6 +8,7 @@ import (
 	"github.com/gianghp/statify/internal"
 	"github.com/gianghp/statify/internal/assets"
 	"github.com/gianghp/statify/internal/database"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -27,6 +28,8 @@ func main() {
 	log.Println("Database connected successfully")
 
 	app := internal.NewApp(db)
+
+	app.Router.Use(cors.Default())
 
 	app.Router.GET("/api/v1/swagger", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(assets.SwaggerUIHTML))

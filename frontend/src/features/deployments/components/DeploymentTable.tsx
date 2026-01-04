@@ -2,49 +2,6 @@ import { Terminal, CheckCircle2, RefreshCw, AlertCircle, Rocket, FlaskConical, M
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const mockFullDeployments = [
-  {
-    id: "8a2b3c",
-    project: "Marketing Site",
-    projectColor: "bg-indigo-500",
-    commitMessage: "Update landing page hero copy",
-    status: "Success",
-    author: "Alex Developer",
-    branch: "main",
-    time: "2m ago",
-  },
-  {
-    id: "b4c5d6",
-    project: "Dashboard App",
-    projectColor: "bg-emerald-500",
-    commitMessage: "Fix navigation z-index bug",
-    status: "Building",
-    author: "Sarah Design",
-    branch: "feat/nav-fix",
-    time: "15m ago",
-  },
-  {
-    id: "c9d8e7",
-    project: "API Gateway",
-    projectColor: "bg-orange-500",
-    commitMessage: "Refactor authentication middleware",
-    status: "Failed",
-    author: "Alex Developer",
-    branch: "auth-v2",
-    time: "1h ago",
-  },
-  {
-    id: "f1a2b3",
-    project: "Docs Site",
-    projectColor: "bg-blue-400",
-    commitMessage: "Add dark mode support",
-    status: "Success",
-    author: "Mike Frontend",
-    branch: "feature/dark-mode",
-    time: "3h ago",
-  },
-];
-
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "Success":
@@ -85,48 +42,11 @@ export function DeploymentTable() {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {mockFullDeployments.map((deployment) => (
-            <tr key={deployment.id} className="group hover:bg-primary/5 transition-colors">
-              <td className="px-6 py-4 align-top">
-                {getStatusIcon(deployment.status)}
-              </td>
-              <td className="px-6 py-4 align-top">
-                <div className="flex flex-col gap-1">
-                  <p className="text-white text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer">
-                    {deployment.commitMessage}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-primary/70 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10">
-                      {deployment.id}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      on <span className="text-foreground/80">{deployment.branch}</span>
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td className="hidden lg:table-cell px-6 py-4 align-middle">
-                <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full text-xs font-medium text-slate-200 shadow-sm">
-                  <span className={`size-2 rounded-full ${deployment.projectColor}`}></span>
-                  {deployment.project}
-                </div>
-              </td>
-              <td className="hidden md:table-cell px-6 py-4 align-middle">
-                <div className="size-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-[10px] text-primary font-bold">
-                  {deployment.author.split(' ').map(n => n[0]).join('')}
-                </div>
-              </td>
-              <td className="hidden sm:table-cell px-6 py-4 align-middle">
-                <span className="text-muted-foreground text-sm">{deployment.time}</span>
-              </td>
-              <td className="px-6 py-4 align-middle text-right">
-                <Button variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 px-3 text-xs flex items-center gap-1.5 hover:bg-white/10">
-                  <Terminal className="w-3.5 h-3.5" />
-                  Logs
-                </Button>
-              </td>
-            </tr>
-          ))}
+          <tr>
+            <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">
+              No recent deployments found.
+            </td>
+          </tr>
         </tbody>
       </table>
       <div className="border-t border-border bg-card px-6 py-4 flex items-center justify-between">

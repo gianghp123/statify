@@ -6,6 +6,25 @@ interface ProjectOverviewProps {
 }
 
 export function ProjectOverview({ project }: ProjectOverviewProps) {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "Never";
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return `${diffDays}d ago`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
       {/* Left: Metadata Cards */}
@@ -24,7 +43,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Framework
               </span>
-              <span className="text-white font-semibold">Next.js 14</span>
+              <span className="text-white font-semibold">Static Site</span>
             </div>
           </div>
           {/* Card 2 */}
@@ -34,10 +53,10 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Git Branch
+                Deployment Branch
               </span>
               <span className="text-white font-semibold flex items-center gap-2">
-                main
+                {project.lastCommit || "main"}
                 <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
               </span>
             </div>
@@ -49,9 +68,9 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Region
+                Subdomain
               </span>
-              <span className="text-white font-semibold">us-east-1 (N. Virginia)</span>
+              <span className="text-white font-semibold truncate max-w-[150px]">{project.subdomain}.statify.io</span>
             </div>
           </div>
         </div>
@@ -87,7 +106,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </span>
             <span className="text-xs font-medium text-white flex items-center gap-1.5">
               <Clock className="w-3 h-3" />
-              Last deployed 2m ago
+              Last deployed {formatDate(project.updatedAt)}
             </span>
           </div>
         </div>

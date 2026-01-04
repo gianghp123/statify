@@ -1,6 +1,9 @@
 package enums
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"fmt"
+)
 
 type Role string
 
@@ -10,7 +13,18 @@ const (
 )
 
 func (p *Role) Scan(value interface{}) error {
-	*p = Role(value.([]byte))
+	if value == nil {
+		*p = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*p = Role(v)
+	case string:
+		*p = Role(v)
+	default:
+		return fmt.Errorf("unexpected type for Role: %T", value)
+	}
 	return nil
 }
 

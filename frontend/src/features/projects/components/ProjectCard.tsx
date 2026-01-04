@@ -7,13 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
-  project: ProjectDto & {
-    status: DeploymentStatus;
-    url: string;
-    lastCommit: string;
-    lastCommitHash: string;
-    updatedAt: string;
-  };
+  project: ProjectDto;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -44,11 +38,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/10 text-muted-foreground text-xs font-bold border border-muted/20">
+            <span className="size-1.5 rounded-full bg-muted-foreground"></span>
+            {status.toUpperCase()}
+          </span>
+        );
     }
   };
 
-  const getBorderColor = (status: DeploymentStatus) => {
+  const getBorderColor = (status: string) => {
     switch (status) {
       case DeploymentStatus.READY:
         return "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(204,255,0,0.05)]";
@@ -72,10 +71,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
     return gradients[index];
   };
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "Unknown date";
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div 
-    onClick={() => router.push(`/projects/${project.id}`)}
+      onClick={() => router.push(`/projects/${project.id}`)}
       className={`group bg-card rounded-xl p-5 border border-border transition-all shadow-lg shadow-black/20 cursor-pointer ${getBorderColor(project.status)}`}
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -101,12 +113,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <div className="flex items-center gap-6 text-sm text-muted-foreground ml-16 md:ml-0">
           <div className="flex items-center gap-2">
             <GitCommit className="w-4 h-4" />
-            <span className="font-mono">{project.lastCommit}</span>
+            <span className="font-mono">{project.lastCommit || "main"}</span>
             <span className="font-mono text-xs bg-white/5 px-1.5 py-0.5 rounded">
-              {project.lastCommitHash}
+              {project.lastCommitHash?.slice(0, 7) || "-------"}
             </span>
           </div>
-          <div className="hidden sm:block">{project.updatedAt}</div>
+          <div className="hidden sm:block">{formatDate(project.updatedAt)}</div>
           <button className="text-muted-foreground hover:text-white p-1 rounded hover:bg-white/10 transition-colors">
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -122,7 +134,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       {project.status === DeploymentStatus.FAILED && (
         <div className="mt-3 ml-16 flex items-center gap-2 text-xs text-red-400">
           <AlertCircle className="w-3 h-3" />
-          <span>Build failed: Package.json missing dependency</span>
+          <span>Something went wrong with the deployment</span>
         </div>
       )}
     </div>

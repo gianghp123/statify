@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { createProject } from "../services/project.actions";
+import { createDeployment } from "../../deployments/services/deployment.actions";
+import { toast } from "sonner";
 
 export function CreateProjectForm() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   const subdomain = projectName
     .toLowerCase()
@@ -25,7 +28,7 @@ export function CreateProjectForm() {
       if (selectedFile.name.endsWith(".zip")) {
         setFile(selectedFile);
       } else {
-        alert("Please upload a .zip file");
+        toast.error("Please upload a .zip file");
       }
     }
   };
@@ -34,12 +37,36 @@ export function CreateProjectForm() {
     e.preventDefault();
     if (!projectName || !file) return;
 
-    setIsUploading(true);
-    // Simulate upload delay
-    setTimeout(() => {
-      setIsUploading(false);
+    setIsPending(true);
+    try {
+      const projectRes = await createProject({
+        name: projectName,
+        subdomain: subdomain,
+      });
+
+      if (!projectRes.success || !projectRes.data) {
+        toast.error(projectRes.message || "Failed to create project");
+        return;
+      }
+
+      const projectId = projectRes.data.id;
+      const deploymentRes = await createDeployment(projectId, file);
+
+      if (!deploymentRes.success) {
+        toast.error(deploymentRes.message || "Failed to trigger deployment");
+        // We still redirect to dashboard as project was created
+      } else {
+        toast.success("Project created and deployment triggered!");
+      }
+
       router.push("/");
-    }, 2000);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -55,6 +82,7 @@ export function CreateProjectForm() {
             onChange={(e) => setProjectName(e.target.value)}
             className="bg-card border-border text-white focus:ring-primary h-12 text-lg"
             required
+            disabled={isPending}
           />
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             <Globe className="w-4 h-4 text-primary" />
@@ -79,6 +107,7 @@ export function CreateProjectForm() {
               onChange={handleFileChange}
               className="absolute inset-0 opacity-0 cursor-pointer"
               required={!file}
+              disabled={isPending}
             />
             
             {file ? (
@@ -96,6 +125,7 @@ export function CreateProjectForm() {
                   size="sm" 
                   onClick={() => setFile(null)}
                   className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                  disabled={isPending}
                 >
                   <X className="w-4 h-4 mr-2" />
                   Remove file
@@ -131,15 +161,16 @@ export function CreateProjectForm() {
           variant="ghost" 
           onClick={() => router.back()}
           className="text-muted-foreground hover:text-white"
+          disabled={isPending}
         >
           Cancel
         </Button>
         <Button 
           type="submit" 
-          disabled={!projectName || !file || isUploading}
+          disabled={!projectName || !file || isPending}
           className="bg-primary text-primary-foreground font-bold px-8 shadow-neon hover:shadow-neon-strong transition-all"
         >
-          {isUploading ? (
+          {isPending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Creating Project...

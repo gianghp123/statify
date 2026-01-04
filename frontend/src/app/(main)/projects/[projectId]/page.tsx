@@ -1,22 +1,35 @@
-"use client";
-
-import { use } from "react";
 import { ChevronRight, Folder } from "lucide-react";
 import Link from "next/link";
 import { ProjectHeader } from "@/features/projects/components/ProjectHeader";
 import { ProjectOverview } from "@/features/projects/components/ProjectOverview";
 import { DeploymentHistoryTable } from "@/features/deployments/components/DeploymentHistoryTable";
-import { mockProjects } from "@/lib/mock";
+import { getProjectById } from "@/features/projects/services/project.get";
+import { getDeployments } from "@/features/deployments/services/deployment.get";
+import { notFound } from "next/navigation";
 
 interface ProjectDetailsPageProps {
   params: Promise<{ projectId: string }>;
 }
 
-export default function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
-  const { projectId } = use(params);
-  
-  // Find project from mock data (or default to the first one)
-  const project = mockProjects.find(p => String(p.id) === projectId) || mockProjects[0];
+export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
+  const { projectId } = await params;
+  const id = parseInt(projectId);
+
+  if (isNaN(id)) {
+    return notFound();
+  }
+
+  const [projectRes, deploymentsRes] = await Promise.all([
+    getProjectById(id),
+    getDeployments(id),
+  ]);
+
+  if (!projectRes.success || !projectRes.data) {
+    return notFound();
+  }
+
+  const project = projectRes.data;
+  const deployments = deploymentsRes.success ? deploymentsRes.data || [] : [];
 
   return (
     <div className="space-y-6">
@@ -35,7 +48,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsPageProps) 
 
       <ProjectHeader project={project} />
       <ProjectOverview project={project} />
-      <DeploymentHistoryTable />
+      <DeploymentHistoryTable deployments={deployments} />
 
       <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
         <p>© 2024 Statify Inc. Custom Deep Plum Edition.</p>

@@ -4,24 +4,36 @@ import { apiFetch } from "@/lib/api-fetch";
 import { LoginRequestDto } from "../dtos/request/login.request.dto";
 import { RegisterRequestDto } from "../dtos/request/register.request.dto";
 import { AuthResponseDto } from "../dtos/response/auth.response.dto";
+import { setAuthTokenServer, removeAuthTokenServer } from "@/lib/cookies/cookies-actions";
+import { redirect } from "next/navigation";
 
-export function login(loginRequestDto: LoginRequestDto) {
-    return apiFetch<AuthResponseDto>('/auth/login', {
+export async function login(prevState: any, loginRequestDto: LoginRequestDto) {
+    const res = await apiFetch<AuthResponseDto>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(loginRequestDto),
-    })
+    });
+
+    if (res.success && res.data?.token) {
+        await setAuthTokenServer(res.data.token);
+    }
+
+    return res;
 }
 
-// export function logout() {
-//     return apiFetch('/auth/logout', {
-//         method: 'POST',
-//     })
-// }
+export async function logout() {
+    await removeAuthTokenServer();
+    redirect("/login");
+}
 
-
-export function register(registerRequestDto: RegisterRequestDto) {
-    return apiFetch<AuthResponseDto>('/auth/register', {
+export async function register(prevState: any, registerRequestDto: RegisterRequestDto) {
+    const res = await apiFetch<AuthResponseDto>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(registerRequestDto),
-    })
+    });
+
+    if (res.success && res.data?.token) {
+        await setAuthTokenServer(res.data.token);
+    }
+
+    return res;
 }

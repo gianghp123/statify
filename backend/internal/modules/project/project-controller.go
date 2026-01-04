@@ -6,7 +6,6 @@ import (
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
-	"github.com/gianghp/statify/internal/modules/project/dtos/response"
 	"github.com/gianghp/statify/internal/modules/project/service"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -21,44 +20,38 @@ func NewProjectController(service *service.ProjectService) *ProjectController {
 }
 
 func (c *ProjectController) ListProjects(ctx *gin.Context) {
-	// For MVP, we assume user ID is 1 or get from context if auth middleware is there
-	// TODO: Get user ID from context
-	userID := uint(1)
 
-	projects, err := c.service.ListProjects(userID)
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	projects, err := c.service.ListProjects(ctx, userID)
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return
 	}
 
-	projectDtos, err := utils.EntitiesToDto[response.ProjectDto](projects.Entities)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
-		return
-	}
-
-	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Projects retrieved successfully", projectDtos, &projects.Pagination))
+	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Projects retrieved successfully", projects.Entities, &projects.Pagination))
 }
 
 func (c *ProjectController) CreateProject(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
 	var req request.CreateProjectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		core.HandleApiError(ctx, core.BadRequestError(err.Error()))
 		return
 	}
 
-	// TODO: Get user ID from context
-	userID := uint(1)
-
-	project, err := c.service.CreateProject(userID, &req)
+	projectDto, err := c.service.CreateProject(ctx, userID, &req)
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
-	}
-
-	projectDto, err := utils.EntityToDto[response.ProjectDto](project)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
 		return
 	}
 
@@ -66,6 +59,13 @@ func (c *ProjectController) CreateProject(ctx *gin.Context) {
 }
 
 func (c *ProjectController) GetProject(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
 	idStr := ctx.Param("project_id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
@@ -73,20 +73,9 @@ func (c *ProjectController) GetProject(ctx *gin.Context) {
 		return
 	}
 
-	project, err := c.service.GetProjectByID(uint(id))
+	projectDto, err := c.service.GetProjectByID(ctx, uint(id), userID)
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
-	}
-
-	if project == nil {
-		core.HandleApiError(ctx, core.NotFoundError())
-		return
-	}
-
-	projectDto, err := utils.EntityToDto[response.ProjectDto](project)
-	if err != nil {
-		core.HandleApiError(ctx, core.InternalError())
 		return
 	}
 

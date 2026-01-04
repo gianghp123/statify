@@ -44,11 +44,6 @@ export async function apiFetch<T = any>(
         };
     }
 
-    if (!(fetchOptions?.body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-    headers["Accept"] = "application/json";
-
     let queryString = "";
     if (query && Object.keys(query).length > 0) {
       const searchParams = new URLSearchParams();
@@ -73,6 +68,8 @@ export async function apiFetch<T = any>(
     const fullUrl = `${baseUrl}${url}${queryString}`;
 
     const response = await fetch(fullUrl, { ...fetchOptions, headers });
+
+    console.log(fullUrl, response)
     if (!response.ok) {
       let message = "Unknown error";
       try {
@@ -87,7 +84,16 @@ export async function apiFetch<T = any>(
       };
     }
 
-    const rawData = await response.json();
+    let rawData: any;
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      const text = await response.text();
+      rawData = text ? JSON.parse(text) : {};
+    } else {
+      rawData = {};
+    }
+
     const data = snakeToCamel<any>(rawData);
 
     if (data.pagination || data.meta) {

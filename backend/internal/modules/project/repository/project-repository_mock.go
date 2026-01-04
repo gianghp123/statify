@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/stretchr/testify/mock"
@@ -10,27 +12,27 @@ type ProjectRepositoryMock struct {
 	mock.Mock
 }
 
-func (m *ProjectRepositoryMock) FindByID(id uint) (*models.Project, error) {
-	args := m.Called(id)
+func (m *ProjectRepositoryMock) FindByID(ctx context.Context, id uint) (*models.Project, error) {
+	args := m.Called(ctx, id)
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
-func (m *ProjectRepositoryMock) FindAllByUserID(userID uint) (*repository.PaginatedEntities[models.Project], error) {
-	args := m.Called(userID)
+func (m *ProjectRepositoryMock) FindAllByUserID(ctx context.Context, userID uint) (*repository.PaginatedEntities[models.Project], error) {
+	args := m.Called(ctx, userID)
 	return args.Get(0).(*repository.PaginatedEntities[models.Project]), args.Error(1)
 }
 
-func (m *ProjectRepositoryMock) Create(project *models.Project) error {
-	args := m.Called(project)
+func (m *ProjectRepositoryMock) Create(ctx context.Context, project *models.Project) error {
+	args := m.Called(ctx, project)
 	return args.Error(0)
 }
 
-func (m *ProjectRepositoryMock) Update(project *models.Project) error {
-	args := m.Called(project)
+func (m *ProjectRepositoryMock) Update(ctx context.Context, project *models.Project) error {
+	args := m.Called(ctx, project)
 	return args.Error(0)
 }
 
-func (m *ProjectRepositoryMock) Delete(project *models.Project) error {
-	args := m.Called(project)
+func (m *ProjectRepositoryMock) Delete(ctx context.Context, project *models.Project) error {
+	args := m.Called(ctx, project)
 	return args.Error(0)
 }

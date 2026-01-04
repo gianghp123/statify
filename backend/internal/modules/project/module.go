@@ -1,8 +1,6 @@
 package project
 
 import (
-	"github.com/gianghp/statify/internal/modules/project/repository"
-	"github.com/gianghp/statify/internal/modules/project/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,20 +8,17 @@ type ProjectModule struct {
 	controller *ProjectController
 }
 
-func NewProjectModule(repo repository.IProjectRepository) *ProjectModule {
-	svc := service.NewProjectService(repo)
-	ctrl := NewProjectController(svc)
-
+func NewProjectModule(controller *ProjectController) *ProjectModule {
 	return &ProjectModule{
-		controller: ctrl,
+		controller: controller,
 	}
 }
 
-func (m *ProjectModule) RegisterRoutes(rg *gin.RouterGroup) {
+func (m *ProjectModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	projects := rg.Group("/projects")
 	{
-		projects.GET("", m.controller.ListProjects)
-		projects.POST("", m.controller.CreateProject)
-		projects.GET("/:project_id", m.controller.GetProject)
+		projects.GET("", authMiddleware, m.controller.ListProjects)
+		projects.POST("", authMiddleware, m.controller.CreateProject)
+		projects.GET("/:project_id", authMiddleware, m.controller.GetProject)
 	}
 }

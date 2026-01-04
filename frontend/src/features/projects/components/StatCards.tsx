@@ -1,10 +1,18 @@
 import { Folder, BarChart3, MemoryStick, TrendingUp } from "lucide-react";
+import { ProjectDto } from "../dtos/response/project.response.dto";
 
-export function StatCards() {
+interface StatCardsProps {
+  projects: ProjectDto[];
+}
+
+export function StatCards({ projects }: StatCardsProps) {
+  const totalProjects = projects.length;
+  // For other stats, we might need more APIs, but let's at least make this one real.
+  
   const stats = [
     {
       title: "Total Projects",
-      value: "12",
+      value: totalProjects.toString(),
       change: "+1",
       icon: Folder,
       increasing: true,
@@ -19,8 +27,8 @@ export function StatCards() {
     },
     {
       title: "Current Builds",
-      value: "2",
-      description: "Processing",
+      value: "0",
+      description: "Idle",
       icon: MemoryStick,
       increasing: false,
     },

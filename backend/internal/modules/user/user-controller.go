@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/gianghp/statify/internal/modules/user/service"
+	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,5 +15,10 @@ func NewUserController(service *service.UserService) *UserController {
 }
 
 func (c *UserController) UpdateProfile(ctx *gin.Context) {
-	// TODO: Implement
+	_, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		// core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+	// TODO: Implement actual update logic with service
 }
