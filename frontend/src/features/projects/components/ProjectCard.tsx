@@ -25,14 +25,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
       case DeploymentStatus.QUEUED:
       case DeploymentStatus.UPLOADED:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-bold border border-yellow-500/20">
-            <span className="w-3 h-3 animate-spin border-2 border-yellow-400 border-t-transparent rounded-full" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-bold border border-warning/20">
+            <span className="w-3 h-3 animate-spin border-2 border-warning border-t-transparent rounded-full" />
             BUILDING
           </span>
         );
       case DeploymentStatus.FAILED:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-xs font-bold border border-red-500/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-error/10 text-error text-xs font-bold border border-error/20">
             <AlertCircle className="w-3 h-3" />
             FAILED
           </span>
@@ -53,9 +53,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
         return "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(204,255,0,0.05)]";
       case DeploymentStatus.QUEUED:
       case DeploymentStatus.UPLOADED:
-        return "hover:border-yellow-400/30 hover:shadow-yellow-400/5";
+        return "hover:border-warning/30 hover:shadow-warning/5";
       case DeploymentStatus.FAILED:
-        return "hover:border-red-500/30 hover:shadow-red-500/5";
+        return "hover:border-error/30 hover:shadow-error/5";
       default:
         return "hover:border-white/10";
     }
@@ -103,7 +103,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <Link
               href={`https://${project.url}`}
               onClick={(e) => e.stopPropagation()}
-              className="font-mono text-lavender-bright hover:text-primary transition-colors text-sm flex items-center gap-1 hover:underline decoration-primary/50 underline-offset-4"
+              className="font-mono text-accent hover:text-primary transition-colors text-sm flex items-center gap-1 hover:underline decoration-primary/50 underline-offset-4"
             >
               {project.url}
               <ExternalLink className="w-4 h-4 opacity-50" />
@@ -127,12 +127,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
       {(project.status === DeploymentStatus.QUEUED || project.status === DeploymentStatus.UPLOADED) && (
         <div className="mt-4 ml-16 h-1 w-full max-w-[200px] bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full bg-yellow-400 w-2/3 rounded-full animate-pulse"></div>
+          <div className="h-full bg-warning w-2/3 rounded-full animate-pulse"></div>
         </div>
       )}
 
       {project.status === DeploymentStatus.FAILED && (
-        <div className="mt-3 ml-16 flex items-center gap-2 text-xs text-red-400">
+        <div className="mt-3 ml-16 flex items-center gap-2 text-xs text-error">
           <AlertCircle className="w-3 h-3" />
           <span>Something went wrong with the deployment</span>
         </div>

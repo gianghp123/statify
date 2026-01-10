@@ -12,8 +12,10 @@ export async function login(prevState: any, loginRequestDto: LoginRequestDto) {
         method: 'POST',
         body: JSON.stringify(loginRequestDto),
     });
+    console.log(res.data);
 
     if (res.success && res.data?.token) {
+        
         await setAuthTokenServer(res.data.token);
     }
 

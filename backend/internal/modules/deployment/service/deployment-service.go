@@ -1,7 +1,12 @@
 package service
 
 import (
+	"archive/zip"
 	"context"
+	"fmt"
+	"log"
+	"mime"
+	"path/filepath"
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
@@ -12,46 +17,110 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/utils"
+	"github.com/minio/minio-go/v7"
 )
 
 type DeploymentService struct {
 	repo        repository.IDeploymentRepository
 	projectRepo projectRepo.IProjectRepository
+	minioClient MinioInterface
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository) *DeploymentService {
-	return &DeploymentService{repo: repo, projectRepo: projectRepo}
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient MinioInterface) *DeploymentService {
+	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient}
 }
 
 func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, projectID uint, req *request.CreateDeploymentRequest) (*response.DeploymentDto, error) {
+	// 1. Authorization & Validation
 	project, err := s.projectRepo.FindByID(ctx, projectID)
 	if err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}
-
 	if project == nil {
 		return nil, core.NotFoundError()
 	}
-
 	if project.UserID != userID {
 		return nil, core.ForbiddenError()
 	}
 
+	// 2. Create the Database Record (Initially "Processing")
 	deployment := &models.Deployment{
 		ProjectID: projectID,
-		Status:    enums.DeploymentStatusQueued,
+		Status:    enums.DeploymentStatusUploaded,
 	}
-
 	if err := s.repo.Create(ctx, deployment); err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}
 
-	deploymentDto, err := utils.EntityToDto[response.DeploymentDto](deployment)
+	// 3. Process the Zip File
+	// Open the uploaded multipart file
+	multipartFile, err := req.File.Open()
 	if err != nil {
-		return nil, core.InternalError()
+		return nil, core.BadRequestError("Could not open uploaded file")
+	}
+	defer multipartFile.Close()
+
+	// zip.NewReader requires an io.ReaderAt.
+	// Since multipart.File is an interface, we read it into a SectionReader or a buffer.
+	// For MVP local dev, reading into memory is fine, or use req.File directly if it supports ReaderAt.
+	zipReader, err := zip.NewReader(multipartFile, req.File.Size)
+	if err != nil {
+		return nil, core.BadRequestError("Invalid zip file")
 	}
 
-	return deploymentDto, nil
+	// 4. Upload files to MinIO
+	// We do this synchronously for the MVP. In production, this would be a background Goroutine.
+	log.Println("Uploading files to MinIO")
+	for _, file := range zipReader.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		if err := s.uploadFileToMinio(ctx, projectID, deployment.ID, file); err != nil {
+			// Mark as failed in DB
+			deployment.Status = enums.DeploymentStatusFailed
+			_ = s.repo.Update(ctx, deployment)
+			return nil, core.InternalError()
+		}
+	}
+
+	// 5. Success! Update status to Ready and set this as the project's active deployment
+	deployment.Status = enums.DeploymentStatusReady
+	if err := s.repo.Update(ctx, deployment); err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	// Optional: Update the project to point to this new active deployment
+	project.CurrentDeploymentID = deployment.ID
+	if err := s.projectRepo.Update(ctx, project); err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	return utils.EntityToDto[response.DeploymentDto](deployment)
+}
+
+// Helper function to handle individual file uploads
+func (s *DeploymentService) uploadFileToMinio(ctx context.Context, projID, depID uint, zf *zip.File) error {
+	rc, err := zf.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	// Detect MIME type
+	contentType := mime.TypeByExtension(filepath.Ext(zf.Name))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	// Construct path: deployments/1/10/css/style.css
+	objectName := fmt.Sprintf("deployments/%d/%d/%s", projID, depID, zf.Name)
+
+	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, rc, zf.FileInfo().Size(), minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+
+	return err
 }
 
 func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, projectID uint) (*coreRepo.PaginatedEntities[*response.DeploymentDto], error) {

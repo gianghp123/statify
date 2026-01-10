@@ -3,7 +3,7 @@ package internal
 import (
 	"log"
 
-	middlewares "github.com/gianghp/statify/internal/middleware"
+	middlewares "github.com/gianghp/statify/internal/middlewares"
 	authModule "github.com/gianghp/statify/internal/modules/auth"
 	authService "github.com/gianghp/statify/internal/modules/auth/service"
 	deploymentModule "github.com/gianghp/statify/internal/modules/deployment"
@@ -17,6 +17,7 @@ import (
 	userService "github.com/gianghp/statify/internal/modules/user/service"
 	"github.com/gianghp/statify/internal/utils/bcrypt"
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
 )
 
@@ -24,7 +25,7 @@ type App struct {
 	Router *gin.Engine
 }
 
-func NewApp(db *gorm.DB) *App {
+func NewApp(db *gorm.DB, minioClient *minio.Client) *App {
 	router := gin.New()
 
 	// Add the colorful logger manually
@@ -32,6 +33,9 @@ func NewApp(db *gorm.DB) *App {
 
 	// Highly recommended: add recovery so your server doesn't die on errors
 	router.Use(gin.Recovery())
+
+	//Middlewares
+	router.Use(middlewares.ErrorLoggingMiddleware())
 
 	api := router.Group("/api/v1")
 
@@ -51,7 +55,7 @@ func NewApp(db *gorm.DB) *App {
 
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo)
-	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo)
+	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClient)
 	userSvc := userService.NewUserService(userRepo)
 
 	// Controllers

@@ -7,10 +7,13 @@ import (
 	_ "ariga.io/atlas-provider-gorm/gormschema"
 	"github.com/gianghp/statify/internal"
 	"github.com/gianghp/statify/internal/assets"
+	"github.com/gianghp/statify/internal/configs"
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 func main() {
@@ -27,7 +30,21 @@ func main() {
 
 	log.Println("Database connected successfully")
 
-	app := internal.NewApp(db)
+	accessKeyID, secretAccessKey := configs.LoadMinioConfig()
+	useSSL := true
+
+	// Initialize minio client object.
+	minioClient, err := minio.New("localhost:9000", &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: useSSL,
+	})
+
+	if err != nil {
+		log.Fatal("Failed to initialize minio client")
+		return
+	}
+
+	app := internal.NewApp(db, minioClient)
 
 	app.Router.Use(cors.Default())
 

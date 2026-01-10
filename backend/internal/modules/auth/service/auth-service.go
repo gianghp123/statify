@@ -15,8 +15,8 @@ import (
 )
 
 type AuthResult struct {
-	User  *userResponse.UserDto
-	Token string
+	User  *userResponse.UserDto `json:"user"`
+	Token string                `json:"token"`
 }
 
 type AuthService struct {

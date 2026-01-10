@@ -44,8 +44,12 @@ func ConflictError(messages ...string) *ApiError {
 	return NewApiError(http.StatusConflict, msg)
 }
 
-func UnauthorizedError() *ApiError {
-	return NewApiError(http.StatusUnauthorized, "Unauthorized")
+func UnauthorizedError(messages ...string) *ApiError {
+	msg := "Unauthorized"
+	if len(messages) > 0 && messages[0] != "" {
+		msg = messages[0]
+	}
+	return NewApiError(http.StatusUnauthorized, msg)
 }
 
 func ForbiddenError() *ApiError {
@@ -85,6 +89,13 @@ func ParseDatabaseError(err error) *ApiError {
 }
 
 func HandleApiError(ctx *gin.Context, err error) {
+	ctx.Error(err)
+
+	// If headers were already written, don't try to send another response
+	if ctx.Writer.Written() {
+		return
+	}
+
 	if apiErr, ok := err.(*ApiError); ok {
 		ctx.JSON(apiErr.Code, apiErr)
 		return

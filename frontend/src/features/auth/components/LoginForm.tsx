@@ -8,7 +8,7 @@ import Link from "next/link";
 import { login } from "../services/auth.actions";
 import { useAction } from "@/hooks/use-action";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { LoginRequestDto } from "../dtos/request/login.request.dto";
 
 export function LoginForm() {
@@ -25,16 +25,18 @@ export function LoginForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    execute({ email, password });
+    startTransition(() => {
+      execute({ email, password });
+    });
   };
 
   return (
     <div className="glass-panel rounded-xl p-8 w-full flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col items-center text-center w-full mb-8">
-        <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 text-primary shadow-[0_0_15px_rgba(204,255,0,0.2)]">
+        <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 text-primary shadow-neon-brand">
           <Bolt className="w-8 h-8" />
         </div>
-        <h2 className="text-white text-[22px] font-bold leading-tight tracking-tight">
+        <h2 className="text-foreground text-[22px] font-bold leading-tight tracking-tight">
           Welcome back
         </h2>
         <p className="text-muted-foreground text-sm font-normal mt-2 leading-relaxed">
@@ -45,7 +47,7 @@ export function LoginForm() {
       <div className="w-full mb-6">
         <Button
           variant="outline"
-          className="flex w-full items-center justify-center rounded-lg h-12 px-5 bg-secondary border-primary/30 text-white gap-3 text-sm font-bold transition-all duration-300 hover:border-primary hover:shadow-neon group"
+          className="flex w-full items-center justify-center rounded-lg h-12 px-5 bg-secondary border-primary/30 text-foreground gap-3 text-sm font-bold transition-all duration-300 hover:border-primary hover:shadow-neon group"
         >
           <Code className="w-[22px] h-[22px] text-primary group-hover:scale-110 transition-transform" />
           <span className="group-hover:text-primary transition-colors">
@@ -64,13 +66,13 @@ export function LoginForm() {
 
       <form className="w-full flex flex-col gap-5" onSubmit={handleSubmit}>
         <div className="flex flex-col w-full group">
-          <Label htmlFor="email" className="text-white text-sm font-medium pb-2">
+          <Label htmlFor="email" className="text-foreground text-sm font-medium pb-2">
             Email Address
           </Label>
           <div className="relative">
             <Input
               id="email"
-              className="flex w-full rounded-lg text-white border-white/5 bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
+              className="flex w-full rounded-lg text-foreground border-border bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
               placeholder="user@example.com"
               type="email"
               value={email}
@@ -84,9 +86,9 @@ export function LoginForm() {
 
         <div className="flex flex-col w-full group">
           <div className="flex justify-between items-center pb-2">
-            <Label htmlFor="password" className="text-white text-sm font-medium">Password</Label>
+            <Label htmlFor="password" className="text-foreground text-sm font-medium">Password</Label>
             <Link
-              className="text-primary text-xs hover:text-[#eeffad] transition-colors"
+              className="text-primary text-xs hover:text-primary/80 transition-colors"
               href="#"
             >
               Forgot password?
@@ -95,7 +97,7 @@ export function LoginForm() {
           <div className="relative">
             <Input
               id="password"
-              className="flex w-full rounded-lg text-white border-white/5 bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
+              className="flex w-full rounded-lg text-foreground border-border bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
               placeholder="••••••••"
               type="password"
               value={password}
@@ -110,7 +112,7 @@ export function LoginForm() {
         <Button 
           type="submit"
           disabled={isPending}
-          className="mt-2 w-full rounded-lg h-11 bg-primary hover:bg-[#d4ff33] text-black text-sm font-bold transition-all shadow-lg shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98]"
+          className="mt-2 w-full rounded-lg h-11 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold transition-all shadow-neon-brand active:scale-[0.98]"
         >
           {isPending ? (
             <>

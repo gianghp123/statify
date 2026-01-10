@@ -6,7 +6,7 @@ const getStatusIcon = (status: string) => {
   switch (status) {
     case "Success":
       return (
-        <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 border border-primary/20 text-primary shadow-neon-primary">
+        <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 border border-primary/20 text-primary shadow-neon-brand">
           <CheckCircle2 className="w-[18px] h-[18px]" />
         </div>
       );
@@ -18,7 +18,7 @@ const getStatusIcon = (status: string) => {
       );
     case "Failed":
       return (
-        <div className="flex items-center justify-center size-8 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 shadow-[0_0_15px_-3px_rgba(251,113,133,0.3)]">
+        <div className="flex items-center justify-center size-8 rounded-full bg-error/10 border border-error/20 text-error shadow-neon-accent">
           <AlertCircle className="w-[18px] h-[18px]" />
         </div>
       );
@@ -51,7 +51,7 @@ export function DeploymentTable() {
       </table>
       <div className="border-t border-border bg-card px-6 py-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing <span className="text-white font-medium">1-4</span> of <span className="text-white font-medium">248</span> deployments
+          Showing <span className="text-foreground font-medium">1-4</span> of <span className="text-foreground font-medium">248</span> deployments
         </p>
         <div className="flex gap-2">
            <Button variant="outline" className="h-8 px-3 text-xs" disabled>Previous</Button>

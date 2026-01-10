@@ -67,9 +67,11 @@ export async function apiFetch<T = any>(
 
     const fullUrl = `${baseUrl}${url}${queryString}`;
 
+    console.log(fullUrl, headers)
+
     const response = await fetch(fullUrl, { ...fetchOptions, headers });
 
-    console.log(fullUrl, response)
+    console.log(response)
     if (!response.ok) {
       let message = "Unknown error";
       try {

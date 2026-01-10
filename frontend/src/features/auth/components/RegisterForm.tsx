@@ -8,7 +8,7 @@ import Link from "next/link";
 import { register } from "../services/auth.actions";
 import { useAction } from "@/hooks/use-action";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 export function RegisterForm() {
@@ -26,7 +26,9 @@ export function RegisterForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    execute({ username, email, password });
+    startTransition(() => {
+      execute({ username, email, password });
+    });
   };
 
   return (
@@ -37,7 +39,7 @@ export function RegisterForm() {
         </div>
       </div>
       <div className="text-center flex flex-col gap-2">
-        <h1 className="text-white text-2xl font-bold tracking-tight">
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">
           Create your account
         </h1>
         <h2 className="text-muted-foreground text-sm font-medium">
@@ -63,22 +65,22 @@ export function RegisterForm() {
       </Button>
 
       <div className="relative flex py-1 items-center">
-        <div className="flex-grow border-t border-white/10"></div>
+        <div className="flex-grow border-t border-border"></div>
         <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs font-medium uppercase tracking-wider">
           Or register with email
         </span>
-        <div className="flex-grow border-t border-white/10"></div>
+        <div className="flex-grow border-t border-border"></div>
       </div>
 
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-1.5 group">
-          <Label htmlFor="username" className="text-white text-sm font-medium pl-1">
+          <Label htmlFor="username" className="text-foreground text-sm font-medium pl-1">
             Username
           </Label>
           <div className="relative">
             <Input
               id="username"
-              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 px-4 text-sm transition-all duration-300 shadow-sm"
+              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/30 h-11 px-4 text-sm transition-all duration-300 shadow-sm"
               placeholder="johndoe"
               type="text"
               value={username}
@@ -89,7 +91,7 @@ export function RegisterForm() {
           </div>
         </div>
         <div className="flex flex-col gap-1.5 group">
-          <Label className="text-white text-sm font-medium pl-1">
+          <Label className="text-foreground text-sm font-medium pl-1">
             Email Address
           </Label>
           <div className="relative">
@@ -97,7 +99,7 @@ export function RegisterForm() {
               <Mail className="w-5 h-5" />
             </span>
             <Input
-              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
+              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/30 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
               placeholder="name@example.com"
               type="email"
               value={email}
@@ -108,7 +110,7 @@ export function RegisterForm() {
           </div>
         </div>
         <div className="flex flex-col gap-1.5 group">
-          <Label className="text-white text-sm font-medium pl-1">
+          <Label className="text-foreground text-sm font-medium pl-1">
             Password
           </Label>
           <div className="relative">
@@ -116,7 +118,7 @@ export function RegisterForm() {
               <Lock className="w-5 h-5" />
             </span>
             <Input
-              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-white placeholder-white/20 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
+              className="w-full rounded-lg bg-input border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/30 h-11 pl-10 pr-4 text-sm transition-all duration-300 shadow-sm"
               placeholder="••••••••"
               type="password"
               value={password}
@@ -127,7 +129,7 @@ export function RegisterForm() {
           </div>
         </div>
         <Button
-          className="mt-2 w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-[#d4ff33] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(204,255,0,0.3)]"
+          className="mt-2 w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-primary/90 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-neon-brand"
           type="submit"
           disabled={isPending}
         >

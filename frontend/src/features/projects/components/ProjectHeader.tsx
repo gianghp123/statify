@@ -1,14 +1,26 @@
-import { ExternalLink, Settings, ArrowUpRight, BarChart3 } from "lucide-react";
+'use client';
+import { ExternalLink, Settings, ArrowUpRight, BarChart3, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ProjectDto } from "../dtos/response/project.response.dto";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { UploadDeploymentForm } from "../../deployments/components/UploadDeploymentForm";
 
 interface ProjectHeaderProps {
   project: ProjectDto;
 }
 
 export function ProjectHeader({ project }: ProjectHeaderProps) {
+  const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
+
   return (
     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10 border-b border-border pb-8">
       <div className="flex flex-col gap-2">
@@ -40,9 +52,33 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           <Settings className="w-4 h-4" />
           Settings
         </Button>
-        <Button className="h-10 px-5 rounded-lg bg-primary text-primary-foreground font-bold text-sm shadow-neon-primary hover:shadow-neon transition-all flex items-center gap-2">
-          Visit Site
-          <ArrowUpRight className="w-4 h-4" />
+
+        <Dialog open={isDeployDialogOpen} onOpenChange={setIsDeployDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="h-10 px-5 rounded-lg bg-accent text-accent-foreground font-bold text-sm shadow-neon-accent hover:shadow-neon hover:bg-accent/90 transition-all flex items-center gap-2">
+              <Upload className="w-4 h-4" />
+              Deploy
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-white">Deploy New Version</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <UploadDeploymentForm 
+                projectId={project.id} 
+                onSuccess={() => setIsDeployDialogOpen(false)}
+                onCancel={() => setIsDeployDialogOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Button className="h-10 px-5 rounded-lg bg-primary text-primary-foreground font-bold text-sm shadow-neon-brand hover:shadow-neon transition-all flex items-center gap-2" asChild>
+          <Link href={`https://${project.url}`} target="_blank">
+            Visit Site
+            <ArrowUpRight className="w-4 h-4" />
+          </Link>
         </Button>
       </div>
     </div>

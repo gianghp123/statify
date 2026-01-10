@@ -11,13 +11,11 @@ func RoleMiddleware(requiredRole enums.Role) gin.HandlerFunc {
 		role, exists := c.Get("role")
 		if !exists {
 			core.HandleApiError(c, core.ForbiddenError())
-			c.Abort()
 			return
 		}
 
 		if role != string(requiredRole) {
 			core.HandleApiError(c, core.ForbiddenError())
-			c.Abort()
 			return
 		}
 

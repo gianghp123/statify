@@ -33,6 +33,11 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -44,6 +49,9 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  --shadow-neon-brand: 0 0 10px var(--neon-brand-glow), 0 0 20px var(--neon-brand-soft);
+  --shadow-neon-accent: 0 0 10px var(--neon-accent-glow), 0 0 20px var(--neon-accent-soft);
 }
 
 :root {
@@ -79,6 +87,20 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.05);
   --sidebar-ring: #ccff00;
+
+  /* Semantic Colors */
+  --accent: #4f46e5;
+  --accent-foreground: #ffffff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --text-strong: #ffffff;
+
+  /* Neon Effects */
+  --neon-brand-glow: rgba(204, 255, 0, 0.3);
+  --neon-brand-soft: rgba(204, 255, 0, 0.1);
+  --neon-accent-glow: rgba(79, 70, 229, 0.3);
+  --neon-accent-soft: rgba(79, 70, 229, 0.1);
 }
 
 .dark {
@@ -109,5 +131,5 @@
 }
 
 .shadow-neon {
-  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3), 0 0 20px rgba(204, 255, 0, 0.1);
+  box-shadow: var(--shadow-neon-brand);
 }
