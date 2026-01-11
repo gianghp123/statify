@@ -13,6 +13,7 @@ export async function apiFetch<T = any>(
   url: string,
   options?: ApiFetchOptions
 ): Promise<BaseResponse<T> | BasePaginatedResponse<T>> {
+
   try {
     const {
       withCredentials = false,
@@ -36,6 +37,7 @@ export async function apiFetch<T = any>(
       const accessToken = await getAuthTokenServer();
       if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
       else
+        console.log('Unauthorized')
         return {
           success: false,
           message: "Unauthorized",
@@ -43,7 +45,6 @@ export async function apiFetch<T = any>(
           data: undefined,
         };
     }
-
     let queryString = "";
     if (query && Object.keys(query).length > 0) {
       const searchParams = new URLSearchParams();

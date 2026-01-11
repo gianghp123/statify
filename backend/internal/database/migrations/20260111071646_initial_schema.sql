@@ -1,7 +1,6 @@
--- Create enum type "deployment_status"
-CREATE TYPE "public"."deployment_status" AS ENUM ('FAILED', 'UPLOADED', 'READY', 'DELETED');
--- Create enum type "role"
-CREATE TYPE "public"."role" AS ENUM ('ADMIN', 'USER');
+-- +goose Up
+-- +goose StatementBegin
+
 -- Create "users" table
 CREATE TABLE "public"."users" (
   "id" bigserial NOT NULL,
@@ -16,8 +15,8 @@ CREATE TABLE "public"."users" (
   CONSTRAINT "uni_users_email" UNIQUE ("email"),
   CONSTRAINT "uni_users_username" UNIQUE ("username")
 );
--- Create index "idx_users_deleted_at" to table: "users"
 CREATE INDEX "idx_users_deleted_at" ON "public"."users" ("deleted_at");
+
 -- Create "projects" table
 CREATE TABLE "public"."projects" (
   "id" bigserial NOT NULL,
@@ -31,8 +30,8 @@ CREATE TABLE "public"."projects" (
   PRIMARY KEY ("id"),
   CONSTRAINT "fk_projects_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
 );
--- Create index "idx_projects_deleted_at" to table: "projects"
 CREATE INDEX "idx_projects_deleted_at" ON "public"."projects" ("deleted_at");
+
 -- Create "deployments" table
 CREATE TABLE "public"."deployments" (
   "id" bigserial NOT NULL,
@@ -47,5 +46,17 @@ CREATE TABLE "public"."deployments" (
   PRIMARY KEY ("id"),
   CONSTRAINT "fk_deployments_project" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
 );
--- Create index "idx_deployments_deleted_at" to table: "deployments"
 CREATE INDEX "idx_deployments_deleted_at" ON "public"."deployments" ("deleted_at");
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+-- Drop tables in reverse order to handle Foreign Key constraints
+DROP TABLE IF EXISTS "public"."deployments";
+DROP TABLE IF EXISTS "public"."projects";
+DROP TABLE IF EXISTS "public"."users";
+
+-- Drop custom enum types
+DROP TYPE IF EXISTS "public"."deployment_status";
+DROP TYPE IF EXISTS "public"."role";
+-- +goose StatementEnd

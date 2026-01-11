@@ -56,8 +56,12 @@ func ForbiddenError() *ApiError {
 	return NewApiError(http.StatusForbidden, "Forbidden")
 }
 
-func InternalError() *ApiError {
-	return NewApiError(http.StatusInternalServerError, "Internal Server Error")
+func InternalError(message ...string) *ApiError {
+	msg := "Internal Server Error"
+	if len(message) > 0 && message[0] != "" {
+		msg = message[0]
+	}
+	return NewApiError(http.StatusInternalServerError, msg)
 }
 
 func NotImplementedError() *ApiError {
@@ -85,7 +89,7 @@ func ParseDatabaseError(err error) *ApiError {
 	if errors.Is(err, gorm.ErrForeignKeyViolated) {
 		return BadRequestError("Foreign key violation")
 	}
-	return InternalError()
+	return InternalError(err.Error())
 }
 
 func HandleApiError(ctx *gin.Context, err error) {

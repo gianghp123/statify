@@ -4,16 +4,17 @@ import (
 	"log"
 	"net/http"
 
-	_ "ariga.io/atlas-provider-gorm/gormschema"
 	"github.com/gianghp/statify/internal"
 	"github.com/gianghp/statify/internal/assets"
 	"github.com/gianghp/statify/internal/configs"
 	"github.com/gianghp/statify/internal/database"
+	"github.com/gianghp/statify/internal/database/migrations"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pressly/goose/v3"
 )
 
 func main() {
@@ -30,8 +31,23 @@ func main() {
 
 	log.Println("Database connected successfully")
 
+	goose.SetBaseFS(migrations.FS)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		panic(err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := goose.Up(sqlDB, "."); err != nil {
+		panic(err)
+	}
+
 	accessKeyID, secretAccessKey := configs.LoadMinioConfig()
-	useSSL := true
+	useSSL := false
 
 	// Initialize minio client object.
 	minioClient, err := minio.New("localhost:9000", &minio.Options{
@@ -40,7 +56,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("Failed to initialize minio client")
+		log.Fatal("Failed to initialize minio client", err)
 		return
 	}
 

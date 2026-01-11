@@ -46,7 +46,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 	// 2. Create the Database Record (Initially "Processing")
 	deployment := &models.Deployment{
 		ProjectID: projectID,
-		Status:    enums.DeploymentStatusUploaded,
+		Status:    enums.DeploymentStatusProcessing,
 	}
 	if err := s.repo.Create(ctx, deployment); err != nil {
 		return nil, core.ParseDatabaseError(err)
@@ -77,10 +77,11 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		}
 
 		if err := s.uploadFileToMinio(ctx, projectID, deployment.ID, file); err != nil {
+
 			// Mark as failed in DB
 			deployment.Status = enums.DeploymentStatusFailed
 			_ = s.repo.Update(ctx, deployment)
-			return nil, core.InternalError()
+			return nil, core.InternalError(err.Error())
 		}
 	}
 

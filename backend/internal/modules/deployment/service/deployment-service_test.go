@@ -82,7 +82,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 
 				// 1. Expect initial DB creation (Status: Uploaded/Processing)
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
-					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusUploaded
+					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusProcessing
 				})).Return(nil).Run(func(args mock.Arguments) {
 					// Simulate GORM setting the ID after creation
 					d := args.Get(1).(*models.Deployment)

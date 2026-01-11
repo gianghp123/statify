@@ -8,11 +8,12 @@ import (
 type DeploymentStatus string
 
 const (
-	DeploymentStatusQueued   DeploymentStatus = "QUEUED"
-	DeploymentStatusFailed   DeploymentStatus = "FAILED"
-	DeploymentStatusUploaded DeploymentStatus = "UPLOADED"
-	DeploymentStatusReady    DeploymentStatus = "READY"
-	DeploymentStatusDeleted  DeploymentStatus = "DELETED"
+	DeploymentStatusQueued     DeploymentStatus = "QUEUED"
+	DeploymentStatusFailed     DeploymentStatus = "FAILED"
+	DeploymentStatusUploaded   DeploymentStatus = "UPLOADED"
+	DeploymentStatusReady      DeploymentStatus = "READY"
+	DeploymentStatusDeleted    DeploymentStatus = "DELETED"
+	DeploymentStatusProcessing DeploymentStatus = "PROCESSING"
 )
 
 func (p *DeploymentStatus) Scan(value interface{}) error {
