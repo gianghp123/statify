@@ -8,6 +8,7 @@ import (
 )
 
 type IProjectRepository interface {
+	FindBySubdomain(ctx context.Context, subdomain string) (*models.Project, error)
 	FindByID(ctx context.Context, id uint) (*models.Project, error)
 	FindAllByUserID(ctx context.Context, userID uint) (*repository.PaginatedEntities[models.Project], error)
 	Create(ctx context.Context, project *models.Project) error

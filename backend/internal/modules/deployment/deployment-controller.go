@@ -1,8 +1,10 @@
 package deployment
 
 import (
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
@@ -92,4 +94,37 @@ func (c *DeploymentController) GetStatus(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, core.NewApiResponse(http.StatusOK, "Deployment status retrieved successfully", deploymentDto))
+}
+
+func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
+	host := strings.Split(ctx.Request.Host, ".")[0]
+
+	clientEtag := ctx.GetHeader("If-None-Match")
+	fileName := ctx.Param("file_name")
+
+	if fileName == "" || fileName == "/" {
+		fileName = "index.html"
+	}
+
+	// Optional: strip the leading slash if it exists
+	fileName = strings.TrimPrefix(fileName, "/")
+
+	log.Println("host", host, "fileName", fileName, "clientEtag", clientEtag)
+	fileDTO, err := c.service.GetCurrentDeploymentFilesByProjectSubdomain(ctx, host, fileName, clientEtag)
+
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	if fileDTO.Stream != nil {
+		defer fileDTO.Stream.Close()
+	}
+
+	if fileDTO.NotModified {
+		ctx.Status(http.StatusNotModified)
+		return
+	}
+
+	ctx.DataFromReader(http.StatusOK, fileDTO.Size, fileDTO.ContentType, fileDTO.Stream, fileDTO.Headers)
 }

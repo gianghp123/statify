@@ -16,6 +16,14 @@ func NewProjectRepository(db *gorm.DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
+func (r *ProjectRepository) FindBySubdomain(ctx context.Context, subdomain string) (*models.Project, error) {
+	var project models.Project
+	if err := r.db.WithContext(ctx).First(&project, "subdomain = ?", subdomain).Error; err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 func (r *ProjectRepository) FindByID(ctx context.Context, id uint) (*models.Project, error) {
 	var project models.Project
 	if err := r.db.WithContext(ctx).First(&project, id).Error; err != nil {

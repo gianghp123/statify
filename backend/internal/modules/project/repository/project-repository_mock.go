@@ -22,6 +22,11 @@ func (m *ProjectRepositoryMock) FindAllByUserID(ctx context.Context, userID uint
 	return args.Get(0).(*repository.PaginatedEntities[models.Project]), args.Error(1)
 }
 
+func (m *ProjectRepositoryMock) FindBySubdomain(ctx context.Context, subdomain string) (*models.Project, error) {
+	args := m.Called(ctx, subdomain)
+	return args.Get(0).(*models.Project), args.Error(1)
+}
+
 func (m *ProjectRepositoryMock) Create(ctx context.Context, project *models.Project) error {
 	args := m.Called(ctx, project)
 	return args.Error(0)

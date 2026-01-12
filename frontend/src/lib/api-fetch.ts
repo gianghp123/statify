@@ -1,7 +1,7 @@
 import "server-only";
+import { snakeToCamel } from "./case";
 import { getAuthTokenServer } from "./cookies/cookies-actions";
 import { BasePaginatedResponse, BaseResponse } from "./response/api-response";
-import { snakeToCamel } from "./case";
 
 type ApiFetchOptions = {
   baseUrl?: string;
@@ -35,16 +35,19 @@ export async function apiFetch<T = any>(
 
     if (withCredentials) {
       const accessToken = await getAuthTokenServer();
-      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-      else
-        console.log('Unauthorized')
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+      } else {
+        console.log('Unauthorized - No Token Found');
         return {
           success: false,
           message: "Unauthorized",
           code: 401,
           data: undefined,
         };
+      }
     }
+
     let queryString = "";
     if (query && Object.keys(query).length > 0) {
       const searchParams = new URLSearchParams();
@@ -78,7 +81,7 @@ export async function apiFetch<T = any>(
       try {
         const errorData = await response.json();
         message = errorData.message || message;
-      } catch (_) {}
+      } catch (_) { }
       return {
         success: false,
         message,

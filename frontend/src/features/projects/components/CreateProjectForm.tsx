@@ -39,7 +39,6 @@ export function CreateProjectForm() {
       const projectId = projectRes.data.id;
       toast.success("Project created successfully!");
       router.push(`/projects/${projectId}`);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("An unexpected error occurred");

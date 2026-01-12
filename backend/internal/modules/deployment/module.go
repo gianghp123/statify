@@ -15,6 +15,7 @@ func NewDeploymentModule(controller *DeploymentController) *DeploymentModule {
 }
 
 func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
+	rg.GET("/serve-files/*file_name", m.controller.ServeFiles)
 	deployments := rg.Group("/projects/:project_id/deployments")
 	{
 		deployments.GET("", authMiddleware, m.controller.GetHistory)

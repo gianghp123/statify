@@ -26,7 +26,7 @@ func (j *JwtService) Generate(userID uint, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":  userID,
 		"role": role,
-		"exp":  time.Now().Add(24 * time.Hour).Unix(),
+		"exp":  time.Now().Add(100 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

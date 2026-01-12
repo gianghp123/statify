@@ -68,8 +68,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		return nil, core.BadRequestError("Invalid zip file")
 	}
 
-	// 4. Upload files to MinIO
-	// We do this synchronously for the MVP. In production, this would be a background Goroutine.
+	// Should be go routine
 	log.Println("Uploading files to MinIO")
 	for _, file := range zipReader.File {
 		if file.FileInfo().IsDir() {
@@ -91,7 +90,27 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		return nil, core.ParseDatabaseError(err)
 	}
 
-	// Optional: Update the project to point to this new active deployment
+	// Set current deployment to offline
+	if project.CurrentDeploymentID != 0 {
+		currentDeployment, err := s.repo.FindByID(ctx, project.CurrentDeploymentID)
+
+		if err != nil {
+			return nil, core.ParseDatabaseError(err)
+		}
+
+		if currentDeployment == nil {
+			return nil, core.NotFoundError()
+		}
+
+		if currentDeployment.Status == enums.DeploymentStatusReady {
+			currentDeployment.Status = enums.DeploymentStatusUploaded
+			if err := s.repo.Update(ctx, currentDeployment); err != nil {
+				return nil, core.ParseDatabaseError(err)
+			}
+		}
+	}
+
+	// Update the project to point to this new active deployment
 	project.CurrentDeploymentID = deployment.ID
 	if err := s.projectRepo.Update(ctx, project); err != nil {
 		return nil, core.ParseDatabaseError(err)
@@ -183,4 +202,60 @@ func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, 
 	}
 
 	return deploymentDto, nil
+}
+
+func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {
+	project, err := s.projectRepo.FindBySubdomain(ctx, subdomain)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return nil, core.NotFoundError()
+	}
+
+	if project.CurrentDeploymentID == 0 {
+		return nil, core.NotFoundError()
+	}
+
+	deployment, err := s.repo.FindByID(ctx, project.CurrentDeploymentID)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	opjectPath := fmt.Sprintf("deployments/%d/%d/%s", project.ID, deployment.ID, fileName)
+
+	stat, err := s.minioClient.StatObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), opjectPath, minio.StatObjectOptions{})
+
+	if err != nil {
+		// Return specific error so controller knows if it's 404 or 500
+		return nil, core.ParseMinioError(err)
+	}
+
+	// 2. Prepare Headers
+	headers := map[string]string{
+		"Cache-Control":          "public, max-age=3600",
+		"ETag":                   stat.ETag,
+		"X-Content-Type-Options": "nosniff",
+	}
+
+	if clientETag == stat.ETag {
+		return &response.FileDownloadDto{
+			NotModified: true,
+			Headers:     headers,
+		}, nil
+	}
+
+	object, err := s.minioClient.GetObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), opjectPath, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, core.ParseMinioError(err)
+	}
+
+	return &response.FileDownloadDto{
+		Stream:      object,
+		Size:        stat.Size,
+		ContentType: stat.ContentType,
+		Headers:     headers,
+		NotModified: false,
+	}, nil
 }

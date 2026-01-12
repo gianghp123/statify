@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
 )
 
@@ -52,8 +53,12 @@ func UnauthorizedError(messages ...string) *ApiError {
 	return NewApiError(http.StatusUnauthorized, msg)
 }
 
-func ForbiddenError() *ApiError {
-	return NewApiError(http.StatusForbidden, "Forbidden")
+func ForbiddenError(messages ...string) *ApiError {
+	msg := "Forbidden"
+	if len(messages) > 0 && messages[0] != "" {
+		msg = messages[0]
+	}
+	return NewApiError(http.StatusForbidden, msg)
 }
 
 func InternalError(message ...string) *ApiError {
@@ -90,6 +95,25 @@ func ParseDatabaseError(err error) *ApiError {
 		return BadRequestError("Foreign key violation")
 	}
 	return InternalError(err.Error())
+}
+
+func ParseMinioError(err error) *ApiError {
+	if err == nil {
+		return nil
+	}
+
+	// Convert the generic error to a Minio-specific ErrorResponse
+	minioErr := minio.ToErrorResponse(err)
+
+	switch minioErr.Code {
+	case "NoSuchKey", "NoSuchBucket":
+		return NotFoundError()
+	case "AccessDenied":
+		return ForbiddenError("Access to storage was denied")
+	default:
+		// Handle network/connection issues or generic internal errors
+		return InternalError(err.Error())
+	}
 }
 
 func HandleApiError(ctx *gin.Context, err error) {
