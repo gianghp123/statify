@@ -26,7 +26,7 @@ import { usePathname } from "next/navigation";
 const items = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   // {
@@ -46,18 +46,23 @@ const items = [
   },
 ];
 
+import { ThemeToggle } from "@/components/theme-toggle";
+
 export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar className="bg-sidebar border-r border-sidebar-border shadow-2xl shadow-black/50">
+    <Sidebar className="bg-sidebar border-r border-sidebar-border shadow-2xl dark:shadow-black/50">
       <SidebarHeader className="p-6">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="size-8 rounded bg-gradient-to-br from-primary to-[#aacc00] flex items-center justify-center text-black shadow-[0_0_10px_rgba(204,255,0,0.4)]">
-            <Bolt className="w-5 h-5 fill-current" />
-          </div>
-          <h1 className="text-white text-xl font-bold tracking-tight">Statify</h1>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="size-8 rounded bg-linear-to-br from-primary to-[#aacc00] dark:to-[#aacc00] flex items-center justify-center text-primary-foreground shadow-[0_0_10px_rgba(204,255,0,0.4)]">
+              <Bolt className="w-5 h-5 fill-current" />
+            </div>
+            <h1 className="text-foreground text-xl font-bold tracking-tight">Statify</h1>
+          </Link>
+          <ThemeToggle />
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="px-4 py-2">
@@ -73,19 +78,19 @@ export function AppSidebar() {
                       isActive={isActive}
                       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border border-transparent ${
                         isActive
-                          ? "bg-sidebar-accent text-white border-white/5"
-                          : "text-sidebar-foreground hover:text-white hover:bg-sidebar-accent"
+                          ? "bg-sidebar-accent text-foreground border-border/50 shadow-sm"
+                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
                       }`}
                     >
                       <Link href={item.url}>
                         <item.icon
                           className={`w-5 h-5 ${
-                            isActive ? "text-primary shadow-primary" : ""
+                            isActive ? "text-primary drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]" : ""
                           }`}
                         />
                         <span className="text-sm font-medium">{item.title}</span>
                         {isActive && (
-                          <div className="ml-auto size-2 rounded-full bg-primary shadow-[0_0_8px_rgba(204,255,0,0.8)]" />
+                          <div className="ml-auto size-2 rounded-full bg-primary shadow-[0_0_8px_rgba(204,255,0,0.6)]" />
                         )}
                       </Link>
                     </SidebarMenuButton>
@@ -105,7 +110,7 @@ export function AppSidebar() {
             AM
           </div>
           <div className="flex flex-col overflow-hidden">
-            <p className="text-sm font-medium text-white truncate">Alex Morgan</p>
+            <p className="text-sm font-medium text-foreground truncate">Alex Morgan</p>
             <p className="text-xs text-sidebar-foreground truncate">alex@statify.app</p>
           </div>
           <ChevronDown className="ml-auto text-sidebar-foreground w-4 h-4" />

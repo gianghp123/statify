@@ -10,14 +10,14 @@ export function ContentTable() {
   return (
     <div className="bg-card rounded-xl overflow-hidden border border-border shadow-xl">
       <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
-        <h3 className="text-white font-bold text-lg">Top Content</h3>
-        <button className="text-xs font-bold text-primary hover:text-white hover:underline transition-colors">
+        <h3 className="text-foreground font-bold text-lg">Top Content</h3>
+        <button className="text-xs font-bold text-primary hover:text-foreground hover:underline transition-colors">
           View All Reports
         </button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-muted-foreground">
-          <thead className="text-xs uppercase bg-black/40 text-white border-b border-border">
+          <thead className="text-xs uppercase bg-black/40 text-foreground border-b border-border">
             <tr>
               <th className="px-6 py-3 font-semibold tracking-wider text-primary" scope="col">Page Path</th>
               <th className="px-6 py-3 font-semibold tracking-wider" scope="col">Visits</th>
@@ -29,7 +29,7 @@ export function ContentTable() {
           <tbody className="divide-y divide-border bg-white/[0.02]">
             {topContent.map((row) => (
               <tr key={row.path} className="hover:bg-primary/5 transition-colors group">
-                <td className="px-6 py-4 font-medium text-white group-hover:text-primary transition-colors">{row.path}</td>
+                <td className="px-6 py-4 font-medium text-foreground group-hover:text-primary transition-colors">{row.path}</td>
                 <td className="px-6 py-4">{row.visits}</td>
                 <td className="px-6 py-4">{row.unique}</td>
                 <td className="px-6 py-4">{row.avgTime}</td>

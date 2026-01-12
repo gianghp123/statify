@@ -13,7 +13,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-white tracking-tight text-3xl md:text-4xl font-bold leading-tight">
+        <h1 className="text-foreground tracking-tight text-3xl md:text-4xl font-bold leading-tight">
           Settings
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">
@@ -27,7 +27,7 @@ export default function SettingsPage() {
             <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
               <section.icon className="w-6 h-6" />
             </div>
-            <h3 className="text-white font-bold text-lg mb-2">{section.title}</h3>
+            <h3 className="text-foreground font-bold text-lg mb-2">{section.title}</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
               {section.description}
             </p>

@@ -51,24 +51,26 @@ export function CreateProjectForm() {
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="space-y-6">
         {/* Project Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-white font-semibold">Project Name</Label>
+        <div className="space-y-4">
+          <Label htmlFor="name" className="text-foreground font-bold text-lg">Project Name</Label>
           <Input
             id="name"
             placeholder="my-awesome-site"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
-            className="bg-card border-border text-white focus:ring-primary h-12 text-lg"
+            className="bg-background border-border text-foreground focus:ring-primary h-14 text-xl font-bold rounded-xl shadow-sm transition-all focus:border-primary/50"
             required
             disabled={isPending}
           />
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            <Globe className="w-4 h-4 text-primary" />
-            Your site will be available at: 
-            <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded border border-white/10">
-              {subdomain}.statify.app
-            </span>
-          </p>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border shadow-inner group transition-all hover:bg-muted/50">
+            <Globe className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Deployment URL</span>
+              <span className="text-foreground font-mono font-bold">
+                {subdomain}.statify.app
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -77,7 +79,7 @@ export function CreateProjectForm() {
           type="button" 
           variant="ghost" 
           onClick={() => router.back()}
-          className="text-muted-foreground hover:text-white"
+          className="text-muted-foreground hover:text-foreground font-bold h-12 px-6"
           disabled={isPending}
         >
           Cancel
@@ -85,12 +87,12 @@ export function CreateProjectForm() {
         <Button 
           type="submit" 
           disabled={!projectName || isPending}
-          className="bg-primary text-primary-foreground font-bold px-8 shadow-neon hover:shadow-neon-strong transition-all"
+          className="bg-primary text-primary-foreground font-black h-12 px-10 rounded-xl shadow-neon-brand hover:scale-[1.02] transition-all flex-1"
         >
           {isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating Project...
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Creating...
             </>
           ) : (
             "Create Project"

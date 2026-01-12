@@ -79,12 +79,12 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
     <div className="space-y-8 py-4">
       <form onSubmit={handleUpdate} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="edit-name" className="text-white font-semibold">Project Name</Label>
+          <Label htmlFor="edit-name" className="text-foreground font-semibold">Project Name</Label>
           <Input
             id="edit-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-background border-border text-white focus:ring-primary h-10"
+            className="bg-background border-border text-foreground focus:ring-primary h-10"
             required
             disabled={isUpdating || isDeleting}
           />
@@ -92,7 +92,7 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="edit-subdomain" className="text-white font-semibold">Subdomain</Label>
+            <Label htmlFor="edit-subdomain" className="text-foreground font-semibold">Subdomain</Label>
             <Button 
               type="button" 
               variant="link" 
@@ -107,7 +107,7 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
             id="edit-subdomain"
             value={subdomain}
             onChange={(e) => setSubdomain(e.target.value)}
-            className="bg-background border-border text-white focus:ring-primary h-10"
+            className="bg-background border-border text-foreground focus:ring-primary h-10"
             required
             disabled={isUpdating || isDeleting}
           />
@@ -152,7 +152,7 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
             <AlertDialogTrigger asChild>
               <Button 
                 variant="destructive" 
-                className="w-full font-bold border border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
+                className="w-full font-bold border border-red-500/30 hover:bg-red-500 hover:text-foreground transition-all"
                 disabled={isUpdating || isDeleting}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -161,16 +161,16 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-card border-border">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogTitle className="text-foreground">Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription className="text-muted-foreground">
-                  This will permanently delete the project <span className="text-white font-semibold">"{project.name}"</span> and all its deployments.
+                  This will permanently delete the project <span className="text-foreground font-semibold">"{project.name}"</span> and all its deployments.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-background border-border text-white hover:bg-accent">Cancel</AlertDialogCancel>
+                <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent">Cancel</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={handleDelete}
-                  className="bg-red-500 text-white hover:bg-red-600 font-bold"
+                  className="bg-red-500 text-foreground hover:bg-red-600 font-bold"
                 >
                   {isDeleting ? "Deleting..." : "Confirm Delete"}
                 </AlertDialogAction>

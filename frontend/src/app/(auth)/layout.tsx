@@ -4,7 +4,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden selection:bg-primary selection:text-black text-white px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden selection:bg-primary selection:text-black text-foreground px-4">
       {/* Background Glows */}
       <div
         className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-purple-900/40 rounded-full blur-[120px] pointer-events-none"

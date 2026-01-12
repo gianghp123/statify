@@ -86,54 +86,54 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <div 
+    <div
       onClick={() => router.push(`/projects/${project.id}`)}
-      className={`group bg-card rounded-xl p-5 border border-border transition-all shadow-lg shadow-black/20 cursor-pointer ${getBorderColor(project.status)}`}
+      className={`group bg-card rounded-2xl p-6 border border-border transition-all shadow-xl hover:shadow-2xl dark:shadow-black/40 cursor-pointer ${getBorderColor(project.status)} hover:scale-[1.01] hover:-translate-y-1`}
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className={`size-12 rounded-lg bg-gradient-to-br ${getGradient(project.name)} border border-white/10 flex items-center justify-center shrink-0`}>
-            <span className="font-bold text-white text-lg">{project.name[0]}</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start gap-5">
+          <div className={`size-14 rounded-2xl bg-linear-to-br ${getGradient(project.name)} border border-border/20 flex items-center justify-center shrink-0 shadow-lg`}>
+            <span className="font-black text-foreground text-2xl drop-shadow-md">{project.name[0]}</span>
           </div>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors">{project.name}</h3>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors tracking-tight">{project.name}</h3>
               {getStatusDisplay(project.status)}
             </div>
             <Link
               href={`https://${project.url}`}
               onClick={(e) => e.stopPropagation()}
-              className="font-mono text-accent hover:text-primary transition-colors text-sm flex items-center gap-1 hover:underline decoration-primary/50 underline-offset-4"
+              className="font-mono text-muted-foreground hover:text-primary transition-all text-xs flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/50 w-fit hover:border-primary/30"
             >
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               {project.url}
-              <ExternalLink className="w-4 h-4 opacity-50" />
             </Link>
           </div>
         </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground ml-16 md:ml-0">
-          <div className="flex items-center gap-2">
-            <GitCommit className="w-4 h-4" />
-            <span className="font-mono">{project.lastCommit || "main"}</span>
-            <span className="font-mono text-xs bg-white/5 px-1.5 py-0.5 rounded">
+        <div className="flex items-center gap-6 text-sm text-muted-foreground ml-[76px] md:ml-0">
+          <div className="flex items-center gap-3">
+            <GitCommit className="w-4 h-4 text-primary/70" />
+            <span className="font-mono font-semibold text-foreground/80">{project.lastCommit || "main"}</span>
+            <span className="font-mono text-[10px] font-bold bg-muted border border-border px-2 py-0.5 rounded shadow-sm">
               {project.lastCommitHash?.slice(0, 7) || "-------"}
             </span>
           </div>
-          <div className="hidden sm:block">{formatDate(project.updatedAt)}</div>
-          <button className="text-muted-foreground hover:text-white p-1 rounded hover:bg-white/10 transition-colors">
-            <MoreVertical className="w-4 h-4" />
+          <div className="hidden sm:block font-medium">{formatDate(project.updatedAt)}</div>
+          <button className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-muted border border-transparent hover:border-border/50 transition-all outline-none">
+            <MoreVertical className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {(project.status === DeploymentStatus.QUEUED || project.status === DeploymentStatus.UPLOADED) && (
-        <div className="mt-4 ml-16 h-1 w-full max-w-[200px] bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full bg-warning w-2/3 rounded-full animate-pulse"></div>
+        <div className="mt-6 ml-[76px] h-1.5 w-full max-w-[250px] bg-muted rounded-full overflow-hidden border border-border/50">
+          <div className="h-full bg-warning w-2/3 rounded-full animate-pulse shadow-[0_0_8px_var(--warning)]"></div>
         </div>
       )}
 
       {project.status === DeploymentStatus.FAILED && (
-        <div className="mt-3 ml-16 flex items-center gap-2 text-xs text-error">
-          <AlertCircle className="w-3 h-3" />
+        <div className="mt-4 ml-[76px] flex items-center gap-2 text-xs text-destructive font-bold bg-destructive/5 w-fit px-3 py-1.5 rounded-lg border border-destructive/20">
+          <AlertCircle className="w-4 h-4" />
           <span>Something went wrong with the deployment</span>
         </div>
       )}

@@ -14,7 +14,7 @@ export function AnalyticsCharts() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
-        <h3 className="text-white font-semibold mb-6">Visitor Traffic</h3>
+        <h3 className="text-foreground font-semibold mb-6">Visitor Traffic</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
@@ -38,7 +38,7 @@ export function AnalyticsCharts() {
       </div>
 
       <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
-        <h3 className="text-white font-semibold mb-6">Bandwidth Consumption (GB)</h3>
+        <h3 className="text-foreground font-semibold mb-6">Bandwidth Consumption (GB)</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>

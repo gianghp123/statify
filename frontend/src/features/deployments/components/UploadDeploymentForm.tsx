@@ -60,10 +60,10 @@ export function UploadDeploymentForm({ projectId, onSuccess, onCancel }: UploadD
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-foreground font-semibold text-lg">Upload build files</Label>
+          <Label className="text-foreground font-bold text-lg">Upload build files</Label>
           <div 
             className={`relative border-2 border-dashed rounded-xl p-10 transition-all flex flex-col items-center justify-center gap-4 ${
-              file ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30 bg-card/50'
+              file ? 'border-primary/50 bg-primary/5 shadow-inner' : 'border-border hover:border-primary/40 bg-muted/20 hover:bg-muted/30'
             }`}
           >
             <input
@@ -77,19 +77,19 @@ export function UploadDeploymentForm({ projectId, onSuccess, onCancel }: UploadD
             
             {file ? (
               <>
-                <div className="size-16 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-neon">
+                <div className="size-16 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-[0_0_15px_var(--neon-brand-glow)]">
                   <FileArchive className="w-8 h-8" />
                 </div>
                 <div className="text-center">
-                  <p className="text-foreground font-bold">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <p className="text-foreground font-extrabold">{file.name}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
                 <Button 
                   type="button" 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => setFile(null)}
-                  className="text-error hover:text-error/80 hover:bg-error/10"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 font-bold transition-all"
                   disabled={isPending}
                 >
                   <X className="w-4 h-4 mr-2" />
@@ -98,22 +98,22 @@ export function UploadDeploymentForm({ projectId, onSuccess, onCancel }: UploadD
               </>
             ) : (
               <>
-                <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground">
+                <div className="size-16 rounded-2xl bg-muted/40 border border-border/50 flex items-center justify-center text-muted-foreground shadow-sm">
                   <Upload className="w-8 h-8" />
                 </div>
                 <div className="text-center">
-                  <p className="text-foreground font-bold text-lg">Click or drag to upload</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-foreground font-extrabold text-xl">Click or drag to upload</p>
+                  <p className="text-sm text-muted-foreground mt-1 font-medium">
                     Upload a ZIP folder containing your build files
                   </p>
                 </div>
               </>
             )}
           </div>
-          <div className="flex items-start gap-2 p-4 rounded-lg bg-accent/10 border border-accent/20 text-xs text-accent/80 leading-relaxed">
-            <Info className="w-4 h-4 shrink-0 mt-0.5" />
-            <p>
-              Make sure your ZIP archive contains an <span className="text-foreground font-mono">index.html</span> file 
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-border/50 text-xs text-foreground/80 leading-relaxed shadow-sm">
+            <Info className="w-5 h-5 text-primary shrink-0" />
+            <p className="font-medium">
+              Make sure your ZIP archive contains an <span className="text-primary font-mono font-bold bg-muted/50 px-1 rounded">index.html</span> file 
               at the root level or your project's build output directory.
             </p>
           </div>
@@ -126,7 +126,7 @@ export function UploadDeploymentForm({ projectId, onSuccess, onCancel }: UploadD
             type="button" 
             variant="ghost" 
             onClick={onCancel}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground font-bold"
             disabled={isPending}
           >
             Cancel
@@ -135,11 +135,11 @@ export function UploadDeploymentForm({ projectId, onSuccess, onCancel }: UploadD
         <Button 
           type="submit" 
           disabled={!file || isPending}
-          className="bg-primary text-primary-foreground font-bold px-8 shadow-neon-brand hover:shadow-neon-brand transition-all flex-1"
+          className="bg-primary text-primary-foreground font-black px-10 h-12 rounded-xl shadow-neon-brand hover:scale-[1.02] transition-all flex-1"
         >
           {isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               Deploying...
             </>
           ) : (

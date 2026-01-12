@@ -56,6 +56,85 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* Backgrounds: Clean White foundation */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  /* Slate 900: Dark text on main background */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* PRIMARY: Vibrant Sky Blue */
+  /* Bright enough to use DARK text on top, creating a soft, modern look */
+  --primary: #38bdf8;
+  --primary-foreground: #0f172a;
+  /* Dark text (Slate 900) instead of White */
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #f0f9ff;
+  /* Very faint blue tint for hover states */
+  --accent-foreground: #0f172a;
+
+  --destructive: #ef4444;
+
+  /* Borders: slightly cool gray */
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+
+  --ring: #38bdf8;
+  /* Matches Primary */
+
+  /* Charts: Updated to match Sky theme */
+  --chart-1: #0ea5e9;
+  /* Sky 500 */
+  --chart-2: #6366f1;
+  /* Indigo */
+  --chart-3: #10b981;
+  /* Emerald */
+  --chart-4: #f59e0b;
+  /* Amber */
+  --chart-5: #ec4899;
+  /* Pink */
+
+  /* Sidebar */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #475569;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #0f172a;
+  /* Dark text here too */
+  --sidebar-accent: #e2e8f0;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #38bdf8;
+
+  /* Semantic Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --text-strong: #020617;
+
+  /* Neon Effects - Adjusted for Sky Blue */
+  --neon-brand-glow: rgba(56, 189, 248, 0.2);
+  --neon-brand-soft: rgba(56, 189, 248, 0.1);
+  --neon-accent-glow: rgba(99, 102, 241, 0.15);
+  --neon-accent-soft: rgba(99, 102, 241, 0.08);
+
+  /* Subtle Gradient */
+  --body-bg: radial-gradient(circle at top left, #f0f9ff 0%, #ffffff 60%, #f8fafc 100%);
+
+  --panel: color-mix(in srgb, var(--background), transparent 35%)
+}
+
+.dark {
   --background: #05010d;
   --foreground: #ffffff;
   --card: #180f26;
@@ -101,13 +180,15 @@
   --neon-brand-soft: rgba(204, 255, 0, 0.1);
   --neon-accent-glow: rgba(79, 70, 229, 0.3);
   --neon-accent-soft: rgba(79, 70, 229, 0.1);
-}
 
-.dark {
   /* Inherit from root as it's already dark-themed */
   --surface-plum: #1a0b2e;
   --input-bg: #130720;
   --mauve: #bfacc8;
+
+  --body-bg: radial-gradient(circle at top left, #2e1065 0%, #0f0518 50%, #000000 100%);
+
+  --panel: rgba(26, 11, 46, 0.65)
 }
 
 @layer base {
@@ -117,17 +198,17 @@
 
   body {
     @apply bg-background text-foreground font-sans min-h-screen;
-    background: radial-gradient(circle at top left, #2e1065 0%, #0f0518 50%, #000000 100%);
+    background: var(--body-bg);
     background-attachment: fixed;
   }
 }
 
 .glass-panel {
-  background: rgba(26, 11, 46, 0.65);
+  background: var(--panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .shadow-neon {

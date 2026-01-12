@@ -43,7 +43,7 @@ export function AnalyticsStats() {
             </div>
           </div>
           <div className="flex items-end justify-between">
-            <span className="text-2xl font-bold text-white">{stat.value}</span>
+            <span className="text-2xl font-bold text-foreground">{stat.value}</span>
             <div className={`flex items-center text-xs font-medium ${stat.increasing ? 'text-primary' : 'text-red-400'}`}>
               {stat.increasing ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
               {stat.change}

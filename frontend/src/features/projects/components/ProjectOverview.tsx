@@ -29,33 +29,33 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
       {/* Left: Metadata Cards */}
       <div className="lg:col-span-4 flex flex-col gap-4">
-        <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+        <h3 className="text-foreground font-semibold text-lg flex items-center gap-2">
           <Info className="text-primary w-5 h-5" />
           Project Details
         </h3>
         <div className="grid grid-cols-1 gap-3">
           {/* Card 1 */}
           <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
-            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-white shrink-0 group-hover:border-primary/30 transition-colors">
+            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <Code className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Framework
               </span>
-              <span className="text-white font-semibold">Static Site</span>
+              <span className="text-foreground font-semibold">Static Site</span>
             </div>
           </div>
           {/* Card 2 */}
           <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
-            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-white shrink-0 group-hover:border-primary/30 transition-colors">
+            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <GitBranch className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Deployment Branch
               </span>
-              <span className="text-white font-semibold flex items-center gap-2">
+              <span className="text-foreground font-semibold flex items-center gap-2">
                 {project.lastCommit || "main"}
                 <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
               </span>
@@ -63,14 +63,14 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           </div>
           {/* Card 3 */}
           <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
-            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-white shrink-0 group-hover:border-primary/30 transition-colors">
+            <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <Globe className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Subdomain
               </span>
-              <span className="text-white font-semibold truncate max-w-[150px]">{project.subdomain}.statify.io</span>
+              <span className="text-foreground font-semibold truncate max-w-[150px]">{project.subdomain}.statify.io</span>
             </div>
           </div>
         </div>
@@ -78,7 +78,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
 
       {/* Right: Preview Card */}
       <div className="lg:col-span-8 flex flex-col gap-4">
-        <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+        <h3 className="text-foreground font-semibold text-lg flex items-center gap-2">
           <Layout className="text-primary w-5 h-5" />
           Live Preview
         </h3>
@@ -104,7 +104,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
             </span>
-            <span className="text-xs font-medium text-white flex items-center gap-1.5">
+            <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
               <Clock className="w-3 h-3" />
               Last deployed {formatDate(project.updatedAt)}
             </span>

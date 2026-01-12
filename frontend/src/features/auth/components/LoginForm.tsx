@@ -44,12 +44,12 @@ export function LoginForm() {
         </p>
       </div>
 
-      <div className="w-full mb-6">
+      <div className="w-full mb-8">
         <Button
           variant="outline"
-          className="flex w-full items-center justify-center rounded-lg h-12 px-5 bg-secondary border-primary/30 text-foreground gap-3 text-sm font-bold transition-all duration-300 hover:border-primary hover:shadow-neon group"
+          className="flex w-full items-center justify-center rounded-xl h-12 px-5 bg-background border-border text-foreground gap-3 text-sm font-bold transition-all duration-300 hover:border-primary hover:bg-muted/50 hover:shadow-neon group"
         >
-          <Code className="w-[22px] h-[22px] text-primary group-hover:scale-110 transition-transform" />
+          <Code className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
           <span className="group-hover:text-primary transition-colors">
             Continue with GitHub
           </span>
@@ -72,7 +72,7 @@ export function LoginForm() {
           <div className="relative">
             <Input
               id="email"
-              className="flex w-full rounded-lg text-foreground border-border bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
+              className="flex w-full rounded-xl text-foreground border-border bg-background h-12 px-4 pl-11 text-base font-medium placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
               placeholder="user@example.com"
               type="email"
               value={email}
@@ -80,7 +80,7 @@ export function LoginForm() {
               required
               disabled={isPending}
             />
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 w-5 h-5 transition-colors group-focus-within:text-primary" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 w-5 h-5 transition-colors group-focus-within:text-primary" />
           </div>
         </div>
 
@@ -97,7 +97,7 @@ export function LoginForm() {
           <div className="relative">
             <Input
               id="password"
-              className="flex w-full rounded-lg text-foreground border-border bg-input h-11 px-4 pl-10 text-sm font-normal placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-inner"
+              className="flex w-full rounded-xl text-foreground border-border bg-background h-12 px-4 pl-11 text-base font-medium placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
               placeholder="••••••••"
               type="password"
               value={password}
@@ -105,7 +105,7 @@ export function LoginForm() {
               required
               disabled={isPending}
             />
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 w-5 h-5 transition-colors group-focus-within:text-primary" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 w-5 h-5 transition-colors group-focus-within:text-primary" />
           </div>
         </div>
 
