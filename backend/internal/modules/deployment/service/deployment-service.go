@@ -16,17 +16,19 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
+	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
-	"github.com/minio/minio-go/v7"
+	minioGo "github.com/minio/minio-go/v7"
+	"gorm.io/gorm"
 )
 
 type DeploymentService struct {
 	repo        repository.IDeploymentRepository
 	projectRepo projectRepo.IProjectRepository
-	minioClient MinioInterface
+	minioClient minio.Interface
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient MinioInterface) *DeploymentService {
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient minio.Interface) *DeploymentService {
 	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient}
 }
 
@@ -48,7 +50,46 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		ProjectID: projectID,
 		Status:    enums.DeploymentStatusProcessing,
 	}
-	if err := s.repo.Create(ctx, deployment); err != nil {
+
+	err = s.repo.Transaction(ctx, func(tx *gorm.DB) error {
+		txRepo := s.repo.WithTx(tx)
+		txProjectRepo := s.projectRepo.WithTx(tx)
+
+		if err := txRepo.Create(ctx, deployment); err != nil {
+			return err
+		}
+
+		// Update output prefix with ID and Timestamp
+		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d-%s", projectID, deployment.ID, deployment.CreatedAt.Format("20060102150405"))
+		if err := txRepo.Update(ctx, deployment); err != nil {
+			return err
+		}
+
+		// Update the project to point to this new active deployment
+		// Set current deployment to offline (within transaction)
+		if project.CurrentDeploymentID != 0 {
+			currentDeployment, err := txRepo.FindByID(ctx, project.CurrentDeploymentID)
+			if err == nil {
+				if currentDeployment.Status == enums.DeploymentStatusReady {
+					currentDeployment.Status = enums.DeploymentStatusUploaded
+					if err := txRepo.Update(ctx, currentDeployment); err != nil {
+						return err
+					}
+				}
+			} else if !core.IsRecordNotFoundError(err) {
+				return err
+			}
+		}
+
+		project.CurrentDeploymentID = deployment.ID
+		if err := txProjectRepo.Update(ctx, project); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}
 
@@ -75,7 +116,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 			continue
 		}
 
-		if err := s.uploadFileToMinio(ctx, projectID, deployment.ID, file); err != nil {
+		if err := s.uploadFileToMinio(ctx, deployment.OutputPrefix, file); err != nil {
 
 			// Mark as failed in DB
 			deployment.Status = enums.DeploymentStatusFailed
@@ -84,35 +125,9 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		}
 	}
 
-	// 5. Success! Update status to Ready and set this as the project's active deployment
+	// 5. Success! Update status to Ready
 	deployment.Status = enums.DeploymentStatusReady
 	if err := s.repo.Update(ctx, deployment); err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	// Set current deployment to offline
-	if project.CurrentDeploymentID != 0 {
-		currentDeployment, err := s.repo.FindByID(ctx, project.CurrentDeploymentID)
-
-		if err != nil {
-			return nil, core.ParseDatabaseError(err)
-		}
-
-		if currentDeployment == nil {
-			return nil, core.NotFoundError()
-		}
-
-		if currentDeployment.Status == enums.DeploymentStatusReady {
-			currentDeployment.Status = enums.DeploymentStatusUploaded
-			if err := s.repo.Update(ctx, currentDeployment); err != nil {
-				return nil, core.ParseDatabaseError(err)
-			}
-		}
-	}
-
-	// Update the project to point to this new active deployment
-	project.CurrentDeploymentID = deployment.ID
-	if err := s.projectRepo.Update(ctx, project); err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}
 
@@ -120,7 +135,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 }
 
 // Helper function to handle individual file uploads
-func (s *DeploymentService) uploadFileToMinio(ctx context.Context, projID, depID uint, zf *zip.File) error {
+func (s *DeploymentService) uploadFileToMinio(ctx context.Context, outputPrefix string, zf *zip.File) error {
 	rc, err := zf.Open()
 	if err != nil {
 		return err
@@ -133,10 +148,10 @@ func (s *DeploymentService) uploadFileToMinio(ctx context.Context, projID, depID
 		contentType = "application/octet-stream"
 	}
 
-	// Construct path: deployments/1/10/css/style.css
-	objectName := fmt.Sprintf("deployments/%d/%d/%s", projID, depID, zf.Name)
+	// Construct path: deployments/1/10-20260112151513/css/style.css
+	objectName := fmt.Sprintf("%s/%s", outputPrefix, zf.Name)
 
-	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, rc, zf.FileInfo().Size(), minio.PutObjectOptions{
+	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, rc, zf.FileInfo().Size(), minioGo.PutObjectOptions{
 		ContentType: contentType,
 	})
 
@@ -223,9 +238,13 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		return nil, core.ParseDatabaseError(err)
 	}
 
-	opjectPath := fmt.Sprintf("deployments/%d/%d/%s", project.ID, deployment.ID, fileName)
+	if deployment.OutputPrefix == "" {
+		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d", deployment.ProjectID, deployment.ID)
+	}
 
-	stat, err := s.minioClient.StatObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), opjectPath, minio.StatObjectOptions{})
+	objectPath := fmt.Sprintf("%s/%s", deployment.OutputPrefix, fileName)
+
+	stat, err := s.minioClient.StatObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), objectPath, minioGo.StatObjectOptions{})
 
 	if err != nil {
 		// Return specific error so controller knows if it's 404 or 500
@@ -246,13 +265,14 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		}, nil
 	}
 
-	object, err := s.minioClient.GetObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), opjectPath, minio.GetObjectOptions{})
+	// 3. Return DTO with stream
+	obj, err := s.minioClient.GetObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), objectPath, minioGo.GetObjectOptions{})
 	if err != nil {
 		return nil, core.ParseMinioError(err)
 	}
 
 	return &response.FileDownloadDto{
-		Stream:      object,
+		Stream:      obj,
 		Size:        stat.Size,
 		ContentType: stat.ContentType,
 		Headers:     headers,

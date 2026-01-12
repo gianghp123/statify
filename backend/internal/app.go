@@ -15,6 +15,7 @@ import (
 	userModule "github.com/gianghp/statify/internal/modules/user"
 	userRepository "github.com/gianghp/statify/internal/modules/user/repository"
 	userService "github.com/gianghp/statify/internal/modules/user/service"
+	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils/bcrypt"
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
@@ -54,8 +55,9 @@ func NewApp(db *gorm.DB, minioClient *minio.Client) *App {
 	}
 
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
-	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo)
-	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClient)
+	minioClientWrapper := storageMinio.NewClient(minioClient)
+	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper)
+	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClientWrapper)
 	userSvc := userService.NewUserService(userRepo)
 
 	// Controllers

@@ -14,6 +14,7 @@ import (
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
 	"github.com/gianghp/statify/internal/modules/project/dtos/response"
 	"github.com/gianghp/statify/internal/modules/project/repository"
+	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ func TestProjectService_CreateProject(t *testing.T) {
 		name         string
 		userID       uint
 		request      *request.CreateProjectRequest
-		setupMocks   func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock)
+		setupMocks   func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock)
 		expectedFunc func(t *testing.T, project *response.ProjectDto, err error)
 	}{
 		{
@@ -34,7 +35,7 @@ func TestProjectService_CreateProject(t *testing.T) {
 				Name:      "Test Project",
 				Subdomain: "test-project",
 			},
-			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock) {
+			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
 					return p.Name == "Test Project" && p.Subdomain == "test-project" && p.UserID == 1
 				})).Return(nil)
@@ -49,7 +50,7 @@ func TestProjectService_CreateProject(t *testing.T) {
 			name:    "Create project failure",
 			userID:  1,
 			request: &request.CreateProjectRequest{Name: "Fail"},
-			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock) {
+			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
 				repo.On("Create", mock.Anything, mock.Anything).Return(errors.New("db error"))
 			},
 			expectedFunc: func(t *testing.T, project *response.ProjectDto, err error) {
@@ -65,8 +66,9 @@ func TestProjectService_CreateProject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.ProjectRepositoryMock)
 			dRepo := new(deploymentRepo.DeploymentRepositoryMock)
-			tt.setupMocks(repo, dRepo)
-			s := NewProjectService(repo, dRepo)
+			minioMock := new(minio.Mock)
+			tt.setupMocks(repo, dRepo, minioMock)
+			s := NewProjectService(repo, dRepo, minioMock)
 			project, err := s.CreateProject(context.TODO(), tt.userID, tt.request)
 			tt.expectedFunc(t, project, err)
 		})
@@ -127,8 +129,9 @@ func TestProjectService_ListProjects(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.ProjectRepositoryMock)
 			dRepo := new(deploymentRepo.DeploymentRepositoryMock)
+			minioMock := new(minio.Mock)
 			tt.setupMocks(repo, dRepo)
-			s := NewProjectService(repo, dRepo)
+			s := NewProjectService(repo, dRepo, minioMock)
 			projects, err := s.ListProjects(context.TODO(), tt.userID)
 			tt.expectedFunc(t, projects, err)
 		})
@@ -183,10 +186,63 @@ func TestProjectService_GetProjectByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.ProjectRepositoryMock)
 			dRepo := new(deploymentRepo.DeploymentRepositoryMock)
+			minioMock := new(minio.Mock)
 			tt.setupMocks(repo, dRepo)
-			s := NewProjectService(repo, dRepo)
+			s := NewProjectService(repo, dRepo, minioMock)
 			project, err := s.GetProjectByID(context.TODO(), tt.id, 1)
 			tt.expectedFunc(t, project, err)
+		})
+	}
+}
+
+func TestProjectService_DeleteProject(t *testing.T) {
+	tests := []struct {
+		name         string
+		projectID    uint
+		userID       uint
+		setupMocks   func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock)
+		expectedFunc func(t *testing.T, err error)
+	}{
+		{
+			name:      "Delete project successfully",
+			projectID: 1,
+			userID:    1,
+			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
+				project := &models.Project{Model: gorm.Model{ID: 1}, UserID: 1}
+				repo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+				dRepo.On("FindAllByProjectID", mock.Anything, uint(1)).Return(&coreRepo.PaginatedEntities[models.Deployment]{
+					Entities: []models.Deployment{{Model: gorm.Model{ID: 10}, OutputPrefix: "deployments/1/10"}},
+				}, nil)
+				repo.On("Delete", mock.Anything, project).Return(nil)
+				minioMock.On("RemoveObjectsByPrefix", mock.Anything, "static-sites", "deployments/1/10").Return(nil)
+
+				// Mock Transaction and WithTx
+				repo.On("Transaction", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+					fn := args.Get(1).(func(*gorm.DB) error)
+					_ = fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				dRepo.On("WithTx", mock.Anything).Return(dRepo)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(repository.ProjectRepositoryMock)
+			dRepo := new(deploymentRepo.DeploymentRepositoryMock)
+			minioMock := new(minio.Mock)
+			tt.setupMocks(repo, dRepo, minioMock)
+			s := NewProjectService(repo, dRepo, minioMock)
+			err := s.DeleteProject(context.TODO(), tt.projectID, tt.userID)
+			tt.expectedFunc(t, err)
+
+			repo.AssertExpectations(t)
+			dRepo.AssertExpectations(t)
+			minioMock.AssertExpectations(t)
 		})
 	}
 }

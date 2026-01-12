@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
-	// ... (omitted similar imports if not needed, but I should probably keep them)
 	"github.com/gianghp/statify/internal/core"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
@@ -12,16 +12,19 @@ import (
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
 	"github.com/gianghp/statify/internal/modules/project/dtos/response"
 	"github.com/gianghp/statify/internal/modules/project/repository"
+	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
+	"gorm.io/gorm"
 )
 
 type ProjectService struct {
 	repo           repository.IProjectRepository
 	deploymentRepo deploymentRepo.IDeploymentRepository
+	minioClient    minio.Interface
 }
 
-func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository) *ProjectService {
-	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo}
+func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, minioClient minio.Interface) *ProjectService {
+	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, minioClient: minioClient}
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *request.CreateProjectRequest) (*response.ProjectDto, error) {
@@ -95,4 +98,73 @@ func (s *ProjectService) enrichProjectDto(ctx context.Context, dto *response.Pro
 	if err == nil && latest != nil {
 		dto.Status = latest.Status
 	}
+}
+
+func (s *ProjectService) UpdateProject(ctx context.Context, id uint, req *request.UpdateProjectRequest) error {
+	project, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return core.NotFoundError()
+	}
+
+	project.Name = req.Name
+	project.Subdomain = req.Subdomain
+
+	if err := s.repo.Update(ctx, project); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	return nil
+}
+
+func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, userID uint) error {
+	return s.repo.Transaction(ctx, func(tx *gorm.DB) error {
+		txRepo := s.repo.WithTx(tx)
+		txDeploymentRepo := s.deploymentRepo.WithTx(tx)
+
+		// 1. Fetch the project and its deployments first to get the MinIO keys
+		project, err := txRepo.FindByID(ctx, projectID)
+		if err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		if project.UserID != userID {
+			return core.ForbiddenError()
+		}
+
+		deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, projectID)
+		if err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		// 2. Delete from DB (The migration handles cascading to deployments)
+		if err := txRepo.Delete(ctx, project); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		// 3. Database transaction is ready to commit.
+		// Now attempt MinIO cleanup.
+		bucket := utils.GetEnv("MINIO_BUCKET", "static-sites")
+		for _, d := range deployments.Entities {
+			// Delete the versioned folder
+			if d.OutputPrefix != "" {
+				err := s.minioClient.RemoveObjectsByPrefix(ctx, bucket, d.OutputPrefix)
+				if err != nil {
+					log.Printf("Failed to delete MinIO prefix %s: %v", d.OutputPrefix, err)
+				}
+			} else {
+				// Fallback for old style paths if any
+				prefix := fmt.Sprintf("deployments/%d/%d", d.ProjectID, d.ID)
+				err := s.minioClient.RemoveObjectsByPrefix(ctx, bucket, prefix)
+				if err != nil {
+					log.Printf("Failed to delete MinIO fallback prefix %s: %v", prefix, err)
+				}
+			}
+		}
+
+		return nil // If nil is returned, GORM commits the DB transaction
+	})
 }

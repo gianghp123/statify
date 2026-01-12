@@ -17,6 +17,8 @@ func NewUserModule(controller *UserController) *UserModule {
 func (m *UserModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	user := rg.Group("/users")
 	{
+		user.GET("/:id", authMiddleware, m.controller.GetUser)
 		user.PUT("/profile", authMiddleware, m.controller.UpdateProfile)
+		user.DELETE("/:id", authMiddleware, m.controller.DeleteAccount)
 	}
 }

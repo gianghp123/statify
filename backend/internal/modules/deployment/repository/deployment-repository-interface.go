@@ -5,6 +5,7 @@ import (
 
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
+	"gorm.io/gorm"
 )
 
 type IDeploymentRepository interface {
@@ -13,4 +14,6 @@ type IDeploymentRepository interface {
 	FindLatestByProjectID(ctx context.Context, projectID uint) (*models.Deployment, error)
 	Create(ctx context.Context, deployment *models.Deployment) error
 	Update(ctx context.Context, deployment *models.Deployment) error
+	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
+	WithTx(tx *gorm.DB) IDeploymentRepository
 }

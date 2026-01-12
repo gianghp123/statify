@@ -7,10 +7,9 @@ import (
 
 type Deployment struct {
 	gorm.Model
-	ProjectID          uint
-	Project            Project
-	Status             enums.DeploymentStatus `gorm:"default:'UPLOADED';type:deployment_status"`
-	OutputPrefix       string                 `gorm:"not null"`
-	SourceZipObjectKey string                 `gorm:"not null"`
-	ValidationError    string
+	ProjectID       uint
+	Project         Project
+	Status          enums.DeploymentStatus `gorm:"default:'UPLOADED';type:deployment_status"`
+	OutputPrefix    string                 `gorm:"not null"`
+	ValidationError string
 }

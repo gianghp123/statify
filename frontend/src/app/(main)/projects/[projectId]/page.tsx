@@ -47,8 +47,12 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
       </nav>
 
       <ProjectHeader project={project} />
-      <ProjectOverview project={project} />
-      <DeploymentHistoryTable deployments={deployments} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <ProjectOverview project={project} />
+          <DeploymentHistoryTable deployments={deployments} projectId={project.id} />
+        </div>
+      </div>
 
       <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
         <p>© 2024 Statify Inc. Custom Deep Plum Edition.</p>

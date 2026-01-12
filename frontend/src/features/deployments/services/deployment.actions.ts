@@ -13,3 +13,9 @@ export async function createDeployment(projectId: number, file: File) {
     withCredentials: true,
   });
 }
+export async function deleteDeployment(projectId: number, id: number) {
+  return apiFetch<void>(`/projects/${projectId}/deployments/${id}`, {
+    method: "DELETE",
+    withCredentials: true,
+  });
+}

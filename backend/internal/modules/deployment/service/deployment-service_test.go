@@ -17,7 +17,8 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	projectRepository "github.com/gianghp/statify/internal/modules/project/repository"
-	"github.com/minio/minio-go/v7"
+	"github.com/gianghp/statify/internal/storage/minio"
+	minioGo "github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
@@ -62,7 +63,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 		userID       uint
 		projectID    uint
 		request      *request.CreateDeploymentRequest
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock)
 		expectedFunc func(t *testing.T, deployment *response.DeploymentDto, err error)
 	}{
 		{
@@ -72,7 +73,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{
 					Model:               gorm.Model{ID: 1},
 					UserID:              1,
@@ -94,12 +95,12 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "index.html") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "css/style.css") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				// 3. Expect Deployment status update to Ready
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
@@ -120,6 +121,19 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
 					return p.ID == 1 && p.CurrentDeploymentID == 10
 				})).Return(nil)
+
+				// 5. Expect Update for OutputPrefix setting (inside transaction)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
+					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
+				})).Return(nil)
+
+				// Mock Transaction and WithTx
+				repo.On("Transaction", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+					fn := args.Get(1).(func(*gorm.DB) error)
+					_ = fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -134,7 +148,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{
 					Model:     gorm.Model{ID: 1},
 					UserID:    1,
@@ -155,12 +169,12 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "index.html") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "css/style.css") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				// 3. Expect Deployment status update to Ready
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
@@ -171,6 +185,19 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
 					return p.ID == 1 && p.CurrentDeploymentID == 10
 				})).Return(nil)
+
+				// 5. Expect Update for OutputPrefix setting (inside transaction)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
+					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
+				})).Return(nil)
+
+				// Mock Transaction and WithTx
+				repo.On("Transaction", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+					fn := args.Get(1).(func(*gorm.DB) error)
+					_ = fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -185,7 +212,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{
 					Model:               gorm.Model{ID: 1},
 					UserID:              1,
@@ -207,12 +234,12 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "index.html") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "css/style.css") }),
 					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minio.UploadInfo{}, nil)
+				).Return(minioGo.UploadInfo{}, nil)
 
 				// 3. Expect Deployment status update to Ready
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
@@ -229,6 +256,19 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
 					return p.ID == 1 && p.CurrentDeploymentID == 10
 				})).Return(nil)
+
+				// 5. Expect Update for OutputPrefix setting (inside transaction)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
+					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
+				})).Return(nil)
+
+				// Mock Transaction and WithTx
+				repo.On("Transaction", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+					fn := args.Get(1).(func(*gorm.DB) error)
+					_ = fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -241,7 +281,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			userID:    2, // Wrong user
 			projectID: 1,
 			request:   &request.CreateDeploymentRequest{File: fileHeader},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{
 					Model:  gorm.Model{ID: 1},
 					UserID: 1,
@@ -260,7 +300,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			minioClient := new(MinioMock)
+			minioClient := new(minio.Mock)
 
 			tt.setupMocks(repo, projectRepo, minioClient)
 
@@ -354,7 +394,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 		subdomain    string
 		fileName     string
 		clientEtag   string
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock)
 		expectedFunc func(t *testing.T, fileDTO *response.FileDownloadDto, err error)
 	}{
 		{
@@ -362,7 +402,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			subdomain:  "testing",
 			fileName:   "index.html",
 			clientEtag: "",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10}
 
@@ -373,10 +413,10 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 				repo.On("FindByID", mock.Anything, uint(50)).Return(deployment, nil)
 
 				minioClient.On("StatObject", mock.Anything, bucket, expectedPath, mock.Anything).
-					Return(minio.ObjectInfo{Size: 100, ContentType: "text/html", ETag: "v1"}, nil)
+					Return(minioGo.ObjectInfo{Size: 100, ContentType: "text/html", ETag: "v1"}, nil)
 
 				minioClient.On("GetObject", mock.Anything, bucket, expectedPath, mock.Anything).
-					Return(&minio.Object{}, nil)
+					Return(&minioGo.Object{}, nil)
 			},
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
 				assert.NoError(t, err)
@@ -390,7 +430,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			subdomain:  "testing",
 			fileName:   "style.css",
 			clientEtag: "v1-cache",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10}
 
@@ -400,7 +440,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 				repo.On("FindByID", mock.Anything, uint(50)).Return(deployment, nil)
 
 				minioClient.On("StatObject", mock.Anything, "static-sites", expectedPath, mock.Anything).
-					Return(minio.ObjectInfo{ETag: "v1-cache"}, nil)
+					Return(minioGo.ObjectInfo{ETag: "v1-cache"}, nil)
 			},
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
 				assert.NoError(t, err)
@@ -412,7 +452,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			name:      "Project not found - 404",
 			subdomain: "unknown",
 			fileName:  "index.html",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *MinioMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				projectRepo.On("FindBySubdomain", mock.Anything, "unknown").Return((*models.Project)(nil), nil)
 			},
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
@@ -427,7 +467,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			// Initialize Mocks
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			minioClient := new(MinioMock)
+			minioClient := new(minio.Mock)
 
 			// Setup expectations
 			tt.setupMocks(repo, projectRepo, minioClient)

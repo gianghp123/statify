@@ -56,5 +56,16 @@ func (r *ProjectRepository) Update(ctx context.Context, project *models.Project)
 }
 
 func (r *ProjectRepository) Delete(ctx context.Context, project *models.Project) error {
-	return r.db.WithContext(ctx).Delete(project).Error
+	return r.db.WithContext(ctx).Unscoped().Delete(project).Error
+}
+
+func (r *ProjectRepository) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	return r.db.WithContext(ctx).Transaction(fn)
+}
+
+func (r *ProjectRepository) WithTx(tx *gorm.DB) IProjectRepository {
+	if tx == nil {
+		return r
+	}
+	return &ProjectRepository{db: tx}
 }

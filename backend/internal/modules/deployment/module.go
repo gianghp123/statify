@@ -21,5 +21,6 @@ func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gi
 		deployments.GET("", authMiddleware, m.controller.GetHistory)
 		deployments.POST("", authMiddleware, m.controller.CreateDeployment)
 		deployments.GET("/:id", authMiddleware, m.controller.GetStatus)
+		deployments.DELETE("/:id", authMiddleware, m.controller.DeleteDeployment)
 	}
 }

@@ -85,7 +85,7 @@ func ParseDatabaseError(err error) *ApiError {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if IsRecordNotFoundError(err) {
 		return NotFoundError()
 	}
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -95,6 +95,10 @@ func ParseDatabaseError(err error) *ApiError {
 		return BadRequestError("Foreign key violation")
 	}
 	return InternalError(err.Error())
+}
+
+func IsRecordNotFoundError(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 func ParseMinioError(err error) *ApiError {

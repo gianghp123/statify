@@ -20,5 +20,7 @@ func (m *ProjectModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.H
 		projects.GET("", authMiddleware, m.controller.ListProjects)
 		projects.POST("", authMiddleware, m.controller.CreateProject)
 		projects.GET("/:project_id", authMiddleware, m.controller.GetProject)
+		projects.PUT("/:project_id", authMiddleware, m.controller.UpdateProject)
+		projects.DELETE("/:project_id", authMiddleware, m.controller.DeleteProject)
 	}
 }

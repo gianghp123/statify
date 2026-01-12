@@ -168,6 +168,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Project"
+    put:
+      tags:
+        - Projects
+      summary: Update Project
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "200":
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    delete:
+      tags:
+        - Projects
+      summary: Delete Project
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
   /projects/{project_id}/deployments:
     get:
       tags:
@@ -243,6 +287,107 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Deployment"
+    delete:
+      tags:
+        - Deployments
+      summary: Delete Deployment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deployment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /serve-files/{file_name}:
+    get:
+      tags:
+        - Deployments
+      summary: Serve static files for a project
+      parameters:
+        - name: file_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File content
+        "304":
+          description: Not modified
+        "404":
+          description: File not found
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get User Profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      tags:
+        - Users
+      summary: Delete User Account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /users/profile:
+    put:
+      tags:
+        - Users
+      summary: Update User Profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -317,3 +462,27 @@ components:
           $ref: "#/components/schemas/User"
         token:
           type: string
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        subdomain:
+          type: string
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+    ApiResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true

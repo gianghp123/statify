@@ -14,12 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import { UploadDeploymentForm } from "../../deployments/components/UploadDeploymentForm";
 
+import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
+
 interface ProjectHeaderProps {
   project: ProjectDto;
 }
 
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   return (
     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10 border-b border-border pb-8">
@@ -48,10 +51,24 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             Analytics
           </Link>
         </Button>
-        <Button variant="outline" className="h-10 px-4 rounded-lg border-border bg-card text-foreground font-medium text-sm hover:bg-accent hover:text-white transition-all flex items-center gap-2">
-          <Settings className="w-4 h-4" />
-          Settings
-        </Button>
+
+        <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="h-10 px-4 rounded-lg border-border bg-card text-foreground font-medium text-sm hover:bg-accent hover:text-white transition-all flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-white">Project Settings</DialogTitle>
+            </DialogHeader>
+            <ProjectSettingsDialog 
+              project={project} 
+              onSuccess={() => setIsSettingsDialogOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDeployDialogOpen} onOpenChange={setIsDeployDialogOpen}>
           <DialogTrigger asChild>

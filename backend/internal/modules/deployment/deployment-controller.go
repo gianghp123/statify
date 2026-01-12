@@ -128,3 +128,14 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
 
 	ctx.DataFromReader(http.StatusOK, fileDTO.Size, fileDTO.ContentType, fileDTO.Stream, fileDTO.Headers)
 }
+
+func (c *DeploymentController) DeleteDeployment(ctx *gin.Context) {
+	// userID, err := utils.GetUserIDFromContext(ctx)
+	// if err != nil {
+	// 	core.HandleApiError(ctx, core.UnauthorizedError())
+	// 	return
+	// }
+
+	// TODO: Implement actual delete logic with service
+	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Deployment deleted successfully (placeholder)", nil))
+}

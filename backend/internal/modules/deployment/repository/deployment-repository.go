@@ -56,3 +56,14 @@ func (r *DeploymentRepository) Create(ctx context.Context, deployment *models.De
 func (r *DeploymentRepository) Update(ctx context.Context, deployment *models.Deployment) error {
 	return r.db.WithContext(ctx).Save(deployment).Error
 }
+
+func (r *DeploymentRepository) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	return r.db.WithContext(ctx).Transaction(fn)
+}
+
+func (r *DeploymentRepository) WithTx(tx *gorm.DB) IDeploymentRepository {
+	if tx == nil {
+		return r
+	}
+	return &DeploymentRepository{db: tx}
+}

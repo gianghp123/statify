@@ -9,4 +9,5 @@ type Project struct {
 	UserID              uint
 	User                User
 	CurrentDeploymentID uint
+	Deployments         []Deployment `gorm:"constraint:OnDelete:CASCADE;foreignKey:ProjectID"`
 }

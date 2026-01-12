@@ -1,6 +1,27 @@
-import { MoreHorizontal, Rocket, FlaskConical, History } from "lucide-react";
+'use client'
+import { MoreHorizontal, Rocket, History, Trash2, AlertCircle } from "lucide-react";
 import { DeploymentDto } from "../dtos/response/deployment.response.dto";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { deleteDeployment } from "../services/deployment.actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -38,9 +59,15 @@ const getStatusBadge = (status: string) => {
 
 interface DeploymentHistoryTableProps {
   deployments: DeploymentDto[];
+  projectId: number;
 }
 
-export function DeploymentHistoryTable({ deployments }: DeploymentHistoryTableProps) {
+export function DeploymentHistoryTable({ deployments, projectId }: DeploymentHistoryTableProps) {
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedDeployment, setSelectedDeployment] = useState<DeploymentDto | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "--";
     try {
@@ -72,6 +99,26 @@ export function DeploymentHistoryTable({ deployments }: DeploymentHistoryTablePr
       return `${mins}m ${secs}s`;
     } catch {
       return "--";
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedDeployment) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteDeployment(projectId, selectedDeployment.id);
+      if (res.success) {
+        toast.success("Deployment deleted successfully");
+        router.refresh();
+      } else {
+        toast.error(res.message || "Failed to delete deployment");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setSelectedDeployment(null);
     }
   };
 
@@ -132,9 +179,25 @@ export function DeploymentHistoryTable({ deployments }: DeploymentHistoryTablePr
                       {calculateDuration(deployment.createdAt, deployment.finishedAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button className="text-muted-foreground hover:text-white transition-colors p-1 rounded hover:bg-white/5">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="text-muted-foreground hover:text-white transition-colors p-1 rounded hover:bg-white/5 outline-none">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-card border-border">
+                          <DropdownMenuItem 
+                            className="text-red-400 focus:text-red-400 focus:bg-red-400/10 cursor-pointer flex items-center gap-2"
+                            onClick={() => {
+                              setSelectedDeployment(deployment);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Deployment
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -156,6 +219,30 @@ export function DeploymentHistoryTable({ deployments }: DeploymentHistoryTablePr
           </div>
         </div>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              Delete Deployment?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Are you sure you want to delete deployment <span className="text-white font-mono">#{selectedDeployment?.id}</span>? 
+              This will permanently remove the files from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-background border-border text-white hover:bg-accent font-medium">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-red-500 text-white hover:bg-red-600 font-bold"
+            >
+              {isDeleting ? "Deleting..." : "Confirm Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
