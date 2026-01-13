@@ -15,7 +15,7 @@ export async function login(prevState: any, loginRequestDto: LoginRequestDto) {
     console.log(res.data);
 
     if (res.success && res.data?.token) {
-        
+
         await setAuthTokenServer(res.data.token);
     }
 
@@ -24,7 +24,7 @@ export async function login(prevState: any, loginRequestDto: LoginRequestDto) {
 
 export async function logout() {
     await removeAuthTokenServer();
-    redirect("/login");
+    redirect("/");
 }
 
 export async function register(prevState: any, registerRequestDto: RegisterRequestDto) {

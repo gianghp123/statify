@@ -2,3 +2,4 @@ vendor
 .env*
 .air.toml
 tmp
+builds

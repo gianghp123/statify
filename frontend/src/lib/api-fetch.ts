@@ -2,6 +2,7 @@ import "server-only";
 import { snakeToCamel } from "./case";
 import { getAuthTokenServer } from "./cookies/cookies-actions";
 import { BasePaginatedResponse, BaseResponse } from "./response/api-response";
+import { redirect } from "next/navigation";
 
 type ApiFetchOptions = {
   baseUrl?: string;
@@ -38,7 +39,6 @@ export async function apiFetch<T = any>(
       if (accessToken) {
         headers["Authorization"] = `Bearer ${accessToken}`;
       } else {
-        console.log('Unauthorized - No Token Found');
         return {
           success: false,
           message: "Unauthorized",
@@ -71,11 +71,8 @@ export async function apiFetch<T = any>(
 
     const fullUrl = `${baseUrl}${url}${queryString}`;
 
-    console.log(fullUrl, headers)
-
     const response = await fetch(fullUrl, { ...fetchOptions, headers });
 
-    console.log(response)
     if (!response.ok) {
       let message = "Unknown error";
       try {

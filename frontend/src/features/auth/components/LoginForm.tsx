@@ -18,7 +18,7 @@ export function LoginForm() {
 
   const { execute, isPending } = useAction(login, {
     onSuccess: () => {
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     },
   });
@@ -109,7 +109,7 @@ export function LoginForm() {
           </div>
         </div>
 
-        <Button 
+        <Button
           type="submit"
           disabled={isPending}
           className="mt-2 w-full rounded-lg h-11 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold transition-all shadow-neon-brand active:scale-[0.98]"

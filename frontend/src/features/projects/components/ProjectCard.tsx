@@ -63,9 +63,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const getGradient = (name: string) => {
     const gradients = [
-      "from-indigo-900 to-purple-900",
-      "from-indigo-900 to-blue-900",
-      "from-purple-900 to-pink-900",
+      "from-primary to-accent",
+      "from-primary/80 to-primary/40",
+      "from-primary to-chart-2",
     ];
     const index = name.length % gradients.length;
     return gradients[index];

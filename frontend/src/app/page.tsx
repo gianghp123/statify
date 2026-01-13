@@ -1,55 +1,27 @@
-import Link from "next/link";
-import {
-  Bolt,
-  Rocket,
-  Globe,
-  Eye,
-  BarChart3,
-  User,
-  BookOpen,
-  Megaphone,
-  ChevronRight,
-  Github,
-  GitBranch,
-  MoreVertical
-} from "lucide-react";
+import { LandingTopbar } from "@/components/landing-topbar";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { getCurrentUser } from "@/features/auth/services/auth.get";
+import {
+  BarChart3,
+  Bolt,
+  BookOpen,
+  Eye,
+  GitBranch,
+  Globe,
+  Megaphone,
+  MoreVertical,
+  Rocket,
+  User
+} from "lucide-react";
+import Link from "next/link";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const userRes = await getCurrentUser();
+  const user = userRes.success ? userRes.data : undefined;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_10px_var(--neon-brand-glow)]">
-                <Bolt className="text-primary-foreground w-5 h-5 fill-current" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">Statify</span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">Features</Link>
-              <Link href="#workflow" className="text-sm text-muted-foreground hover:text-primary transition-colors">Workflow</Link>
-              <Link href="#pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Link href="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-                Sign In
-              </Link>
-              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-neon">
-                <Link href="/register">Get Started</Link>
-              </Button>
-              <div className="w-9 h-9 flex items-center justify-center">
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <LandingTopbar user={user} />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 relative overflow-hidden">

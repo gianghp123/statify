@@ -1,10 +1,11 @@
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatCards } from "@/features/projects/components/StatCards";
-import { ProjectList } from "@/features/projects/components/ProjectList";
-import Link from "next/link";
-import { getProjects } from "@/features/projects/services/project.get";
+import { logout } from "@/features/auth/services/auth.actions";
 import { getCurrentUser } from "@/features/auth/services/auth.get";
+import { ProjectList } from "@/features/projects/components/ProjectList";
+import { StatCards } from "@/features/projects/components/StatCards";
+import { getProjects } from "@/features/projects/services/project.get";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const [projectsRes, userRes] = await Promise.all([
@@ -13,7 +14,10 @@ export default async function DashboardPage() {
   ]);
 
   const projects = projectsRes.success ? projectsRes.data || [] : [];
-  const userName = userRes.success ? userRes.data?.username || "User" : "User";
+  if (!userRes.success || !userRes.data?.username) {
+    await logout()
+  }
+  const userName = userRes.data?.username
 
   return (
     <div className="space-y-8">
