@@ -1,12 +1,11 @@
+import { ProjectDto } from "@/features/projects/dtos/response/project.response.dto";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
 
 export interface DeploymentDto {
   id: number;
-  projectId: number;
+  project?: ProjectDto;
   status: DeploymentStatus;
-  outputPrefix: string | null;
-  sourceZipObjectKey: string | null;
-  validationError: string | null;
+  validationError?: string;
   createdAt: string;
-  finishedAt: string | null;
+  finishedAt?: string;
 }

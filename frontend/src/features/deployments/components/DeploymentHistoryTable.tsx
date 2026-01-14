@@ -22,61 +22,17 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DeploymentDto } from "../dtos/response/deployment.response.dto";
 import { deleteDeployment, turnDeploymentLive, turnDeploymentOffline } from "../services/deployment.actions";
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case DeploymentStatus.READY:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/20">
-          <span className="size-1.5 rounded-full bg-primary"></span>
-          Ready
-        </span>
-      );
-    case DeploymentStatus.QUEUED:
-    case DeploymentStatus.UPLOADED:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-400/10 px-2.5 py-0.5 text-xs font-medium text-yellow-400 border border-yellow-400/20">
-          <span className="size-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
-          Building
-        </span>
-      );
-    case DeploymentStatus.FAILED:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-400/10 px-2.5 py-0.5 text-xs font-medium text-red-400 border border-red-400/20">
-          <span className="size-1.5 rounded-full bg-red-400"></span>
-          Failed
-        </span>
-      );
-    case DeploymentStatus.PROCESSING:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-400/10 px-2.5 py-0.5 text-xs font-medium text-purple-400 border border-purple-400/20">
-          <span className="size-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-          Processing
-        </span>
-      );
-    case DeploymentStatus.LIVE:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-400/10 px-2.5 py-0.5 text-xs font-medium text-green-400 border border-green-400/20">
-          <span className="size-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
-          Live
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/10 px-2.5 py-0.5 text-xs font-medium text-muted-foreground border border-muted/20">
-          <span className="size-1.5 rounded-full bg-muted-foreground"></span>
-          {status}
-        </span>
-      );
-  }
-};
+import { calculateDuration, formatDate } from "@/lib/utils/time.utils";
+import { getStatusBadge } from "../utils/get-status-badge";
+import { Pagination } from "@/lib/response/api-response";
 
 interface DeploymentHistoryTableProps {
   initialDeployments: DeploymentDto[];
   projectId: number;
+  pagination: Pagination;
 }
 
-export function DeploymentHistoryTable({ initialDeployments, projectId }: DeploymentHistoryTableProps) {
+export function DeploymentHistoryTable({ initialDeployments, projectId, pagination }: DeploymentHistoryTableProps) {
   const router = useRouter();
   const [deployments, setDeployments] = useState<DeploymentDto[]>(initialDeployments);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -87,39 +43,6 @@ export function DeploymentHistoryTable({ initialDeployments, projectId }: Deploy
     setDeployments(initialDeployments);
   }, [initialDeployments]);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "--";
-    try {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      return `${diffDays}d ago`;
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const calculateDuration = (start?: string, end?: string | null) => {
-    if (!start || !end) return "--";
-    try {
-      const s = new Date(start);
-      const e = new Date(end);
-      const diffMs = e.getTime() - s.getTime();
-      const diffSecs = Math.floor(diffMs / 1000);
-      if (diffSecs < 60) return `${diffSecs}s`;
-      const mins = Math.floor(diffSecs / 60);
-      const secs = diffSecs % 60;
-      return `${mins}m ${secs}s`;
-    } catch {
-      return "--";
-    }
-  };
 
   const handleDelete = async () => {
     if (!selectedDeployment) return;
@@ -225,7 +148,7 @@ export function DeploymentHistoryTable({ initialDeployments, projectId }: Deploy
                           {deployment.id}
                         </span>
                         <span className="text-muted-foreground truncate max-w-[150px] text-xs font-medium">
-                          {deployment.sourceZipObjectKey?.split('/').pop() || "Manual upload"}
+                          {"Manual upload"}
                         </span>
                       </div>
                     </td>
@@ -291,7 +214,7 @@ export function DeploymentHistoryTable({ initialDeployments, projectId }: Deploy
         </div>
         <div className="border-t border-border bg-muted/20 px-6 py-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground font-medium">
-            Showing {deployments.length} deployments
+            Showing {pagination.totalCount} deployments
           </span>
           <div className="flex items-center gap-2">
             <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent" disabled>

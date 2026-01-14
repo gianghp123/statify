@@ -33,7 +33,7 @@ func TestEntityToDto(t *testing.T) {
 		UpdatedAt: fixedTime,
 	}
 
-	dto, err := EntityToDto[response.UserDto](&entity)
+	dto, err := EntityToDto[*response.UserDto](&entity)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, dto)
 }

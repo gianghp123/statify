@@ -21,6 +21,23 @@ func NewDeploymentController(service *service.DeploymentService) *DeploymentCont
 	return &DeploymentController{service: service}
 }
 
+func (c *DeploymentController) GetGlobalDeploymentHistory(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	page, limit := utils.GetPaginationConfig(ctx)
+	deployments, err := c.service.GetGlobalDeploymentHistory(ctx, userID, page, limit)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Global deployment history retrieved successfully", deployments.Entities, &deployments.Pagination))
+}
+
 func (c *DeploymentController) GetHistory(ctx *gin.Context) {
 	userID, err := utils.GetUserIDFromContext(ctx)
 	if err != nil {

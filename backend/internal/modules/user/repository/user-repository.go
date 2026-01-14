@@ -24,28 +24,26 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, e
 	return &user, nil
 }
 
-func (r *UserRepository) FindAll(ctx context.Context, page int, limit int) (*repository.PaginatedEntities[models.User], error) {
-	var users []models.User
-	var totalCount int64
-
-	db := r.db.WithContext(ctx).Model(&models.User{})
-
-	if err := db.Count(&totalCount).Error; err != nil {
-		return nil, err
-	}
-
-	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&users).Error; err != nil {
-		return nil, err
-	}
-
-	return &repository.PaginatedEntities[models.User]{
-		Entities: users,
+func (r *UserRepository) FindAll(ctx context.Context, page int, limit int) (repository.PaginatedEntities[*models.User], error) {
+	result := repository.PaginatedEntities[*models.User]{
+		Entities: []*models.User{},
 		Pagination: repository.Pagination{
-			TotalCount: totalCount,
+			TotalCount: 0,
 			Page:       page,
 			Limit:      limit,
 		},
-	}, nil
+	}
+
+	db := r.db.WithContext(ctx).Model(&models.User{})
+
+	if err := db.Count(&result.Pagination.TotalCount).Error; err != nil {
+		return result, err
+	}
+	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&result.Entities).Error; err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {

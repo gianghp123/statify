@@ -24,6 +24,57 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
+	tests := []struct {
+		name         string
+		userID       uint
+		page         int
+		limit        int
+		SetupMocks   func(t *testing.T, repo *repository.DeploymentRepositoryMock)
+		expectedFunc func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error)
+	}{
+		{
+			name:   "Get global deployment history successfully",
+			userID: 1,
+			page:   1,
+			limit:  10,
+			SetupMocks: func(t *testing.T, repo *repository.DeploymentRepositoryMock) {
+				repo.On("FindAllByUserID", mock.Anything, uint(1), 1, 10).Return(coreRepo.PaginatedEntities[*models.Deployment]{
+					Entities: []*models.Deployment{{
+						Model: gorm.Model{
+							ID: 1,
+						},
+						Status:       enums.DeploymentStatusReady,
+						OutputPrefix: "deployments/1/1-",
+						ProjectID:    1,
+					}},
+					Pagination: coreRepo.Pagination{
+						TotalCount: 0,
+						Page:       1,
+						Limit:      10,
+					},
+				}, nil)
+			},
+			expectedFunc: func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, deployments)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repo := new(repository.DeploymentRepositoryMock)
+			test.SetupMocks(t, repo)
+			deploymentService := NewDeploymentService(repo, nil, nil)
+			deployments, err := deploymentService.GetGlobalDeploymentHistory(context.Background(), test.userID, test.page, test.limit)
+			test.expectedFunc(t, deployments, err)
+			repo.AssertExpectations(t)
+
+		})
+	}
+}
+
 func createMockMultipartFileHeader(t *testing.T, filenames []string) (*multipart.FileHeader, []byte) {
 	// 1. Create a ZIP in memory
 	zipBuf := new(bytes.Buffer)
@@ -288,7 +339,7 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 		userID       uint
 		projectID    uint
 		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
-		expectedFunc func(t *testing.T, deployments *coreRepo.PaginatedEntities[*response.DeploymentDto], err error)
+		expectedFunc func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error)
 	}{
 		{
 			name:      "Get history successfully",
@@ -296,12 +347,12 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 			projectID: 1,
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
 				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
-				repo.On("FindAllByProjectID", mock.Anything, uint(1), 1, 10).Return(&coreRepo.PaginatedEntities[models.Deployment]{
-					Entities:   []models.Deployment{{ProjectID: 1}},
+				repo.On("FindAllByProjectID", mock.Anything, uint(1), 1, 10).Return(coreRepo.PaginatedEntities[*models.Deployment]{
+					Entities:   []*models.Deployment{{ProjectID: 1}},
 					Pagination: coreRepo.Pagination{TotalCount: 1, Page: 1, Limit: 10},
 				}, nil)
 			},
-			expectedFunc: func(t *testing.T, deployments *coreRepo.PaginatedEntities[*response.DeploymentDto], err error) {
+			expectedFunc: func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, deployments)
 			},

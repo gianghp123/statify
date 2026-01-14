@@ -17,9 +17,9 @@ func (m *UserRepositoryMock) FindByID(ctx context.Context, id uint) (*models.Use
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *UserRepositoryMock) FindAll(ctx context.Context, page int, limit int) (*repository.PaginatedEntities[models.User], error) {
+func (m *UserRepositoryMock) FindAll(ctx context.Context, page int, limit int) (repository.PaginatedEntities[*models.User], error) {
 	args := m.Called(ctx, page, limit)
-	return args.Get(0).(*repository.PaginatedEntities[models.User]), args.Error(1)
+	return args.Get(0).(repository.PaginatedEntities[*models.User]), args.Error(1)
 }
 
 func (m *UserRepositoryMock) FindByEmail(ctx context.Context, email string) (*models.User, error) {

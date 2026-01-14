@@ -13,7 +13,7 @@ type ApiFetchOptions = {
 export async function apiFetch<T = any>(
   url: string,
   options?: ApiFetchOptions
-): Promise<BaseResponse<T> | BasePaginatedResponse<T>> {
+): Promise<T> {
 
   try {
     const {
@@ -44,7 +44,7 @@ export async function apiFetch<T = any>(
           message: "Unauthorized",
           code: 401,
           data: undefined,
-        };
+        } as T;
       }
     }
 
@@ -84,7 +84,7 @@ export async function apiFetch<T = any>(
         message,
         code: response.status,
         data: undefined,
-      };
+      } as T;
     }
 
     let rawData: any;
@@ -104,13 +104,13 @@ export async function apiFetch<T = any>(
         success: true,
         data: data.data ? (data.data as T) : ([] as T),
         pagination: data.pagination || data.meta?.pagination,
-      } as BasePaginatedResponse<T>;
+      } as T;
     }
     return {
       success: true,
       code: response.status,
       data: data.data !== undefined ? (data.data as T) : (data as T),
-    } as BaseResponse<T>;
+    } as T;
   } catch (error: any) {
     console.error(error);
     return {
@@ -118,6 +118,6 @@ export async function apiFetch<T = any>(
       message: error.message || "Unknown error",
       code: error.code || 500,
       data: undefined,
-    };
+    } as T;
   }
 }

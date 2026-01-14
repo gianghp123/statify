@@ -9,7 +9,7 @@ import (
 
 type IUserRepository interface {
 	FindByID(ctx context.Context, id uint) (*models.User, error)
-	FindAll(ctx context.Context, page int, limit int) (*repository.PaginatedEntities[models.User], error)
+	FindAll(ctx context.Context, page int, limit int) (repository.PaginatedEntities[*models.User], error)
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
 	Create(ctx context.Context, user *models.User) error

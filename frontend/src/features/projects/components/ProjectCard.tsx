@@ -1,5 +1,6 @@
 'use client'
 
+import { getStatusBadge } from "@/features/deployments/utils/get-status-badge";
 import { ProjectDto } from "../dtos/response/project.response.dto";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
 import { ExternalLink, GitCommit, MoreVertical, AlertCircle, Trash2, CheckCircle2 } from "lucide-react";
@@ -12,55 +13,6 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
-
-  const getStatusDisplay = (status: DeploymentStatus) => {
-    switch (status) {
-      case DeploymentStatus.LIVE:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
-            <span className="size-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(204,255,0,0.8)]"></span>
-            LIVE
-          </span>
-        );
-      case DeploymentStatus.READY:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
-            <CheckCircle2 className="w-3 h-3" />
-            READY
-          </span>
-        );
-      case DeploymentStatus.QUEUED:
-      case DeploymentStatus.UPLOADED:
-      case DeploymentStatus.PROCESSING:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-bold border border-warning/20">
-            <span className="w-3 h-3 animate-spin border-2 border-warning border-t-transparent rounded-full" />
-            {status === DeploymentStatus.PROCESSING ? 'PROCESSING' : 'BUILDING'}
-          </span>
-        );
-      case DeploymentStatus.FAILED:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-error/10 text-error text-xs font-bold border border-error/20">
-            <AlertCircle className="w-3 h-3" />
-            FAILED
-          </span>
-        );
-      case DeploymentStatus.DELETED:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/10 text-muted-foreground text-xs font-bold border border-muted/20 opacity-60">
-            <Trash2 className="w-3 h-3" />
-            DELETED
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/10 text-muted-foreground text-xs font-bold border border-muted/20">
-            <span className="size-1.5 rounded-full bg-muted-foreground"></span>
-            {status}
-          </span>
-        );
-    }
-  };
 
   const getBorderColor = (status: string) => {
     switch (status) {
@@ -113,7 +65,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="space-y-1.5">
             <div className="flex items-center gap-3">
               <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors tracking-tight">{project.name}</h3>
-              {getStatusDisplay(project.status)}
+              {getStatusBadge(project.status)}
             </div>
             <Link
               href={project.url}
@@ -126,13 +78,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground ml-[76px] md:ml-0">
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <GitCommit className="w-4 h-4 text-primary/70" />
             <span className="font-mono font-semibold text-foreground/80">{project.lastCommit || "main"}</span>
             <span className="font-mono text-[10px] font-bold bg-muted border border-border px-2 py-0.5 rounded shadow-sm">
               {project.lastCommitHash?.slice(0, 7) || "-------"}
             </span>
-          </div>
+          </div> */}
           <div className="hidden sm:block font-medium">{formatDate(project.updatedAt)}</div>
           <button className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-muted border border-transparent hover:border-border/50 transition-all outline-none">
             <MoreVertical className="w-5 h-5" />

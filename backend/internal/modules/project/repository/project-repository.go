@@ -32,28 +32,27 @@ func (r *ProjectRepository) FindByID(ctx context.Context, id uint) (*models.Proj
 	return &project, nil
 }
 
-func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (*repository.PaginatedEntities[models.Project], error) {
-	var projects []models.Project
-	var totalCount int64
-
-	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("user_id = ?", userID)
-
-	if err := db.Count(&totalCount).Error; err != nil {
-		return nil, err
-	}
-
-	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&projects).Error; err != nil {
-		return nil, err
-	}
-
-	return &repository.PaginatedEntities[models.Project]{
-		Entities: projects,
+func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (repository.PaginatedEntities[*models.Project], error) {
+	result := repository.PaginatedEntities[*models.Project]{
+		Entities: []*models.Project{},
 		Pagination: repository.Pagination{
-			TotalCount: totalCount,
+			TotalCount: 0,
 			Page:       page,
 			Limit:      limit,
 		},
-	}, nil
+	}
+
+	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("user_id = ?", userID)
+
+	if err := db.Count(&result.Pagination.TotalCount).Error; err != nil {
+		return result, err
+	}
+
+	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&result.Entities).Error; err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
 func (r *ProjectRepository) Create(ctx context.Context, project *models.Project) error {

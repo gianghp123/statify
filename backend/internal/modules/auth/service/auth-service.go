@@ -63,7 +63,7 @@ func (s *AuthService) Register(ctx context.Context, request *request.RegisterReq
 		return nil, core.InternalError()
 	}
 
-	userDto, err := utils.EntityToDto[userResponse.UserDto](user)
+	userDto, err := utils.EntityToDto[*userResponse.UserDto](user)
 	if err != nil {
 		return nil, core.InternalError()
 	}
@@ -86,7 +86,7 @@ func (s *AuthService) Login(ctx context.Context, request *request.LoginRequest) 
 		return nil, core.InternalError()
 	}
 
-	userDto, err := utils.EntityToDto[userResponse.UserDto](user)
+	userDto, err := utils.EntityToDto[*userResponse.UserDto](user)
 	if err != nil {
 		return nil, core.InternalError()
 	}
@@ -100,7 +100,7 @@ func (s *AuthService) Me(ctx context.Context, userID uint) (*userResponse.UserDt
 		return nil, core.NotFoundError()
 	}
 
-	userDto, err := utils.EntityToDto[userResponse.UserDto](user)
+	userDto, err := utils.EntityToDto[*userResponse.UserDto](user)
 	if err != nil {
 		return nil, core.InternalError()
 	}

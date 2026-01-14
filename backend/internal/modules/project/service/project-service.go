@@ -38,7 +38,7 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *re
 		return nil, core.ParseDatabaseError(err)
 	}
 
-	projectDto, err := utils.EntityToDto[response.ProjectDto](project)
+	projectDto, err := utils.EntityToDto[*response.ProjectDto](project)
 	if err != nil {
 		return nil, core.InternalError()
 	}
@@ -46,22 +46,27 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *re
 	return projectDto, nil
 }
 
-func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int, limit int) (*coreRepo.PaginatedEntities[*response.ProjectDto], error) {
-	projects, err := s.repo.FindAllByUserID(ctx, userID, page, limit)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
+func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int, limit int) (coreRepo.PaginatedEntities[*response.ProjectDto], error) {
+	result := coreRepo.PaginatedEntities[*response.ProjectDto]{
+		Entities:   []*response.ProjectDto{},
+		Pagination: coreRepo.Pagination{Page: page, Limit: limit},
 	}
 
-	projectDtos, err := utils.EntitiesToDto[response.ProjectDto](projects.Entities)
+	projects, err := s.repo.FindAllByUserID(ctx, userID, page, limit)
 	if err != nil {
-		return nil, core.InternalError()
+		return result, core.ParseDatabaseError(err)
+	}
+
+	projectDtos, err := utils.EntitiesToDto[*response.ProjectDto](projects.Entities)
+	if err != nil {
+		return result, core.InternalError()
 	}
 
 	for _, dto := range projectDtos {
 		s.enrichProjectDto(ctx, dto)
 	}
 
-	return &coreRepo.PaginatedEntities[*response.ProjectDto]{
+	return coreRepo.PaginatedEntities[*response.ProjectDto]{
 		Entities:   projectDtos,
 		Pagination: projects.Pagination,
 	}, nil
@@ -82,7 +87,7 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id uint, userID uin
 		return nil, core.NotFoundError()
 	}
 
-	projectDto, err := utils.EntityToDto[response.ProjectDto](project)
+	projectDto, err := utils.EntityToDto[*response.ProjectDto](project)
 	if err != nil {
 		return nil, core.InternalError()
 	}

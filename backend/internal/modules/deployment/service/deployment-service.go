@@ -32,6 +32,94 @@ func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo pro
 	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient}
 }
 
+func (s *DeploymentService) GetGlobalDeploymentHistory(ctx context.Context, userId uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
+	result := coreRepo.PaginatedEntities[*response.DeploymentDto]{
+		Entities:   []*response.DeploymentDto{},
+		Pagination: coreRepo.Pagination{Page: page, Limit: limit},
+	}
+
+	deployments, err := s.repo.FindAllByUserID(ctx, userId, page, limit)
+	if err != nil {
+		return result, core.ParseDatabaseError(err)
+	}
+
+	deploymentDtos, err := utils.EntitiesToDto[*response.DeploymentDto](deployments.Entities)
+	if err != nil {
+		return result, core.InternalError()
+	}
+
+	return coreRepo.PaginatedEntities[*response.DeploymentDto]{
+		Entities:   deploymentDtos,
+		Pagination: deployments.Pagination,
+	}, nil
+}
+
+func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, projectID uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
+	result := coreRepo.PaginatedEntities[*response.DeploymentDto]{
+		Entities:   []*response.DeploymentDto{},
+		Pagination: coreRepo.Pagination{Page: page, Limit: limit},
+	}
+
+	project, err := s.projectRepo.FindByID(ctx, projectID)
+	if err != nil {
+		return result, core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return result, core.NotFoundError()
+	}
+
+	if project.UserID != userID {
+		return result, core.ForbiddenError()
+	}
+
+	deployments, err := s.repo.FindAllByProjectID(ctx, projectID, page, limit)
+	if err != nil {
+		return result, core.ParseDatabaseError(err)
+	}
+
+	deploymentDtos, err := utils.EntitiesToDto[*response.DeploymentDto](deployments.Entities)
+	if err != nil {
+		return result, core.InternalError()
+	}
+
+	return coreRepo.PaginatedEntities[*response.DeploymentDto]{
+		Entities:   deploymentDtos,
+		Pagination: deployments.Pagination,
+	}, nil
+}
+
+func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, id uint) (*response.DeploymentDto, error) {
+	deployment, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	if deployment == nil {
+		return nil, core.NotFoundError()
+	}
+
+	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return nil, core.NotFoundError()
+	}
+
+	if project.UserID != userID {
+		return nil, core.ForbiddenError()
+	}
+
+	deploymentDto, err := utils.EntityToDto[*response.DeploymentDto](deployment)
+	if err != nil {
+		return nil, core.InternalError()
+	}
+
+	return deploymentDto, nil
+}
+
 func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, projectID uint, req *request.CreateDeploymentRequest) (*response.DeploymentDto, error) {
 	// 1. Authorization & Validation
 	project, err := s.projectRepo.FindByID(ctx, projectID)
@@ -109,7 +197,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		return nil, core.ParseDatabaseError(err)
 	}
 
-	return utils.EntityToDto[response.DeploymentDto](deployment)
+	return utils.EntityToDto[*response.DeploymentDto](deployment)
 }
 
 // Helper function to handle individual file uploads
@@ -134,67 +222,6 @@ func (s *DeploymentService) uploadFileToMinio(ctx context.Context, outputPrefix 
 	})
 
 	return err
-}
-
-func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, projectID uint, page int, limit int) (*coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
-	project, err := s.projectRepo.FindByID(ctx, projectID)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return nil, core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return nil, core.ForbiddenError()
-	}
-
-	deployments, err := s.repo.FindAllByProjectID(ctx, projectID, page, limit)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	deploymentDtos, err := utils.EntitiesToDto[response.DeploymentDto](deployments.Entities)
-	if err != nil {
-		return nil, core.InternalError()
-	}
-
-	return &coreRepo.PaginatedEntities[*response.DeploymentDto]{
-		Entities:   deploymentDtos,
-		Pagination: deployments.Pagination,
-	}, nil
-}
-
-func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, id uint) (*response.DeploymentDto, error) {
-	deployment, err := s.repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if deployment == nil {
-		return nil, core.NotFoundError()
-	}
-
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return nil, core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return nil, core.ForbiddenError()
-	}
-
-	deploymentDto, err := utils.EntityToDto[response.DeploymentDto](deployment)
-	if err != nil {
-		return nil, core.InternalError()
-	}
-
-	return deploymentDto, nil
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {

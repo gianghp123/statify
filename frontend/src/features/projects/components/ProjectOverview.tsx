@@ -35,7 +35,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
         </h3>
         <div className="grid grid-cols-1 gap-3">
           {/* Card 1 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary transition-colors group">
             <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <Code className="w-5 h-5" />
             </div>
@@ -47,7 +47,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </div>
           </div>
           {/* Card 2 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary transition-colors group">
             <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <GitBranch className="w-5 h-5" />
             </div>
@@ -55,14 +55,14 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Deployment Branch
               </span>
-              <span className="text-foreground font-semibold flex items-center gap-2">
+              {/* <span className="text-foreground font-semibold flex items-center gap-2">
                 {project.lastCommit || "main"}
                 <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
-              </span>
+              </span> */}
             </div>
           </div>
           {/* Card 3 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors group">
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary transition-colors group">
             <div className="size-10 rounded-lg bg-background border border-border flex items-center justify-center text-foreground shrink-0 group-hover:border-primary/30 transition-colors">
               <Globe className="w-5 h-5" />
             </div>

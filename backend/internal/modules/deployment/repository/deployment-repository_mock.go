@@ -18,9 +18,14 @@ func (m *DeploymentRepositoryMock) FindByID(ctx context.Context, id uint) (*mode
 	return args.Get(0).(*models.Deployment), args.Error(1)
 }
 
-func (m *DeploymentRepositoryMock) FindAllByProjectID(ctx context.Context, projectID uint, page int, limit int) (*repository.PaginatedEntities[models.Deployment], error) {
+func (m *DeploymentRepositoryMock) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (repository.PaginatedEntities[*models.Deployment], error) {
+	args := m.Called(ctx, userID, page, limit)
+	return args.Get(0).(repository.PaginatedEntities[*models.Deployment]), args.Error(1)
+}
+
+func (m *DeploymentRepositoryMock) FindAllByProjectID(ctx context.Context, projectID uint, page int, limit int) (repository.PaginatedEntities[*models.Deployment], error) {
 	args := m.Called(ctx, projectID, page, limit)
-	return args.Get(0).(*repository.PaginatedEntities[models.Deployment]), args.Error(1)
+	return args.Get(0).(repository.PaginatedEntities[*models.Deployment]), args.Error(1)
 }
 
 func (m *DeploymentRepositoryMock) FindLatestByProjectID(ctx context.Context, projectID uint) (*models.Deployment, error) {

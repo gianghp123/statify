@@ -30,6 +30,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
 
   const project = projectRes.data;
   const deployments = deploymentsRes.success ? deploymentsRes.data || [] : [];
+  const pagination = deploymentsRes.success ? deploymentsRes.pagination || { totalCount: 0, page: 1, limit: 10 } : { totalCount: 0, page: 1, limit: 10 };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -51,7 +52,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
         <div className="lg:col-span-2 space-y-12">
           <ProjectOverview project={project} />
           <div className="pt-4">
-            <DeploymentHistoryTable initialDeployments={deployments} projectId={project.id} />
+            <DeploymentHistoryTable initialDeployments={deployments} projectId={project.id} pagination={pagination} />
           </div>
         </div>
       </div>

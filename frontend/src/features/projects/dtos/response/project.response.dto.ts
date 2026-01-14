@@ -5,11 +5,7 @@ export interface ProjectDto {
   name: string;
   url: string;
   status: DeploymentStatus;
-  lastCommit?: string;
-  lastCommitHash?: string;
   updatedAt?: string;
   subdomain?: string;
-  userId?: number;
-  currentDeploymentId?: number | null;
   createdAt?: string;
 }

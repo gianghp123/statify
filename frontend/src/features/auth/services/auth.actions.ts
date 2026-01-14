@@ -6,9 +6,10 @@ import { RegisterRequestDto } from "../dtos/request/register.request.dto";
 import { AuthResponseDto } from "../dtos/response/auth.response.dto";
 import { setAuthTokenServer, removeAuthTokenServer } from "@/lib/cookies/cookies-actions";
 import { redirect } from "next/navigation";
+import { BaseResponse } from "@/lib/response/api-response";
 
 export async function login(prevState: any, loginRequestDto: LoginRequestDto) {
-    const res = await apiFetch<AuthResponseDto>('/auth/login', {
+    const res = await apiFetch<BaseResponse<AuthResponseDto>>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(loginRequestDto),
     });
@@ -28,7 +29,7 @@ export async function logout() {
 }
 
 export async function register(prevState: any, registerRequestDto: RegisterRequestDto) {
-    const res = await apiFetch<AuthResponseDto>('/auth/register', {
+    const res = await apiFetch<BaseResponse<AuthResponseDto>>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(registerRequestDto),
     });
