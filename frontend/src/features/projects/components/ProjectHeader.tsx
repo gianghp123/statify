@@ -36,7 +36,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           </Badge>
         </div>
         <Link
-          href={`https://${project.url}`}
+          href={`${project.url}`}
           target="_blank"
           className="text-muted-foreground hover:text-primary hover:underline flex items-center gap-1.5 transition-all text-base group font-medium"
         >
@@ -63,9 +63,9 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             <DialogHeader>
               <DialogTitle className="text-2xl font-extrabold text-foreground">Project Settings</DialogTitle>
             </DialogHeader>
-            <ProjectSettingsDialog 
-              project={project} 
-              onSuccess={() => setIsSettingsDialogOpen(false)} 
+            <ProjectSettingsDialog
+              project={project}
+              onSuccess={() => setIsSettingsDialogOpen(false)}
             />
           </DialogContent>
         </Dialog>
@@ -82,8 +82,8 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               <DialogTitle className="text-2xl font-extrabold text-foreground">Deploy New Version</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <UploadDeploymentForm 
-                projectId={project.id} 
+              <UploadDeploymentForm
+                projectId={project.id}
                 onSuccess={() => setIsDeployDialogOpen(false)}
                 onCancel={() => setIsDeployDialogOpen(false)}
               />

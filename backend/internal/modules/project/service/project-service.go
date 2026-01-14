@@ -93,7 +93,7 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id uint, userID uin
 }
 
 func (s *ProjectService) enrichProjectDto(ctx context.Context, dto *response.ProjectDto) {
-	dto.URL = fmt.Sprintf("https://%s.statify.app", dto.Subdomain)
+	dto.URL = fmt.Sprintf("https://%s.%s", dto.Subdomain, utils.GetEnv("DOMAIN", "statify.online"))
 	latest, err := s.deploymentRepo.FindLatestByProjectID(ctx, dto.ID)
 	if err == nil && latest != nil {
 		dto.Status = latest.Status

@@ -67,7 +67,7 @@ export function CreateProjectForm() {
             <div className="flex flex-col">
               <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Deployment URL</span>
               <span className="text-foreground font-mono font-bold">
-                {subdomain}.statify.app
+                {subdomain}.{process.env.NEXT_PUBLIC_PROJECT_URL}
               </span>
             </div>
           </div>
@@ -75,17 +75,17 @@ export function CreateProjectForm() {
       </div>
 
       <div className="flex items-center gap-4 pt-4">
-        <Button 
-          type="button" 
-          variant="ghost" 
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => router.back()}
           className="text-muted-foreground hover:text-foreground font-bold h-12 px-6"
           disabled={isPending}
         >
           Cancel
         </Button>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={!projectName || isPending}
           className="bg-primary text-primary-foreground font-black h-12 px-10 rounded-xl shadow-neon-brand hover:scale-[1.02] transition-all flex-1"
         >

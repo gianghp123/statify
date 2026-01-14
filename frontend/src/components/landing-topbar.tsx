@@ -7,6 +7,7 @@ import Link from "next/link"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
 import { logout } from "@/features/auth/services/auth.actions"
+import { Logo } from "./logo"
 
 
 export function LandingTopbar({ user }: { user: UserDto | undefined }) {
@@ -14,13 +15,7 @@ export function LandingTopbar({ user }: { user: UserDto | undefined }) {
   return <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center h-16">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_10px_var(--neon-brand-glow)]">
-            <Bolt className="text-primary-foreground w-5 h-5 fill-current" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-foreground">Statify</span>
-        </div>
-
+        <Logo />
         <div className="hidden md:flex items-center gap-8">
           <Link href="#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">Features</Link>
           <Link href="#workflow" className="text-sm text-muted-foreground hover:text-primary transition-colors">Workflow</Link>

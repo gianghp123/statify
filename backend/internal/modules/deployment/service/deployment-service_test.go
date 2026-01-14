@@ -107,21 +107,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					return d.ID == 10 && d.Status == enums.DeploymentStatusReady
 				})).Return(nil)
 
-				// 3.1 Set old deployment status to uploaded
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{
-					Model:  gorm.Model{ID: 1},
-					Status: enums.DeploymentStatusReady,
-				}, nil)
-
-				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
-					return d.ID == 1 && d.Status == enums.DeploymentStatusUploaded
-				})).Return(nil)
-
-				// 4. Expect Project update to set CurrentDeploymentID
-				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
-					return p.ID == 1 && p.CurrentDeploymentID == 10
-				})).Return(nil)
-
 				// 5. Expect Update for OutputPrefix setting (inside transaction)
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
 					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
@@ -133,7 +118,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					_ = fn(nil)
 				})
 				repo.On("WithTx", mock.Anything).Return(repo)
-				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -181,11 +165,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					return d.ID == 10 && d.Status == enums.DeploymentStatusReady
 				})).Return(nil)
 
-				// 4. Expect Project update to set CurrentDeploymentID
-				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
-					return p.ID == 1 && p.CurrentDeploymentID == 10
-				})).Return(nil)
-
 				// 5. Expect Update for OutputPrefix setting (inside transaction)
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
 					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
@@ -197,7 +176,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					_ = fn(nil)
 				})
 				repo.On("WithTx", mock.Anything).Return(repo)
-				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -246,17 +224,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					return d.ID == 10 && d.Status == enums.DeploymentStatusReady
 				})).Return(nil)
 
-				// 3.1 Set old deployment status to uploaded
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{
-					Model:  gorm.Model{ID: 1},
-					Status: enums.DeploymentStatusFailed,
-				}, nil)
-
-				// 4. Expect Project update to set CurrentDeploymentID
-				projectRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
-					return p.ID == 1 && p.CurrentDeploymentID == 10
-				})).Return(nil)
-
 				// 5. Expect Update for OutputPrefix setting (inside transaction)
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
 					return d.ID == 10 && strings.HasPrefix(d.OutputPrefix, "deployments/1/10-")
@@ -268,7 +235,6 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 					_ = fn(nil)
 				})
 				repo.On("WithTx", mock.Anything).Return(repo)
-				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -404,7 +370,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			clientEtag: "",
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
-				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10}
+				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive}
 
 				expectedPath := "deployments/10/50/index.html"
 				bucket := "static-sites"
@@ -432,7 +398,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			clientEtag: "v1-cache",
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
-				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10}
+				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive}
 
 				expectedPath := "deployments/10/50/style.css"
 
@@ -454,6 +420,22 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			fileName:  "index.html",
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				projectRepo.On("FindBySubdomain", mock.Anything, "unknown").Return((*models.Project)(nil), nil)
+			},
+			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, fileDTO)
+			},
+		},
+		{
+			name:      "Status is not live",
+			subdomain: "testing",
+			fileName:  "index.html",
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
+				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusProcessing}
+
+				projectRepo.On("FindBySubdomain", mock.Anything, "testing").Return(project, nil)
+				repo.On("FindByID", mock.Anything, uint(50)).Return(deployment, nil)
 			},
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
 				assert.Error(t, err)
@@ -484,6 +466,140 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			repo.AssertExpectations(t)
 			projectRepo.AssertExpectations(t)
 			minioClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
+	tests := []struct {
+		name         string
+		userID       uint
+		deploymentID uint
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		expectedFunc func(t *testing.T, err error)
+	}{
+		{
+			name:         "Turn deployment live successfully",
+			userID:       1,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+				repo.On("Update", mock.Anything, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}).Return(nil)
+				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}).Return(nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:         "Status is already live",
+			userID:       1,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+		{
+			name:         "Project already has a live deployment",
+			userID:       1,
+			deploymentID: 2,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(2)).Return(&models.Deployment{Model: gorm.Model{ID: 2}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+		{
+			name:         "Forbidden User",
+			userID:       2,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Initialize Mocks
+			repo := new(repository.DeploymentRepositoryMock)
+			projectRepo := new(projectRepository.ProjectRepositoryMock)
+			tt.setupMocks(repo, projectRepo)
+			s := NewDeploymentService(repo, projectRepo, nil)
+			err := s.TurnDeploymentLive(context.TODO(), tt.deploymentID, tt.userID)
+			tt.expectedFunc(t, err)
+		})
+	}
+}
+
+func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
+	tests := []struct {
+		name         string
+		userID       uint
+		deploymentID uint
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		expectedFunc func(t *testing.T, err error)
+	}{
+		{
+			name:         "Turn deployment offline successfully",
+			userID:       1,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, nil)
+				repo.On("Update", mock.Anything, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}).Return(nil)
+				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 0}).Return(nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:         "Deployment is not the current deployment",
+			userID:       1,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 2}, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+		{
+			name:         "Forbidden User",
+			userID:       2,
+			deploymentID: 1,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Initialize Mocks
+			repo := new(repository.DeploymentRepositoryMock)
+			projectRepo := new(projectRepository.ProjectRepositoryMock)
+			tt.setupMocks(repo, projectRepo)
+			s := NewDeploymentService(repo, projectRepo, nil)
+			err := s.TurnDeploymentOffline(context.TODO(), tt.deploymentID, tt.userID)
+			tt.expectedFunc(t, err)
 		})
 	}
 }

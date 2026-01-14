@@ -70,7 +70,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Subdomain
               </span>
-              <span className="text-foreground font-semibold truncate max-w-[150px]">{project.subdomain}.statify.io</span>
+              <span className="text-foreground font-semibold truncate max-w-[250px]">{project.url}</span>
             </div>
           </div>
         </div>
@@ -95,8 +95,8 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </div>
           </div>
           {/* Placeholder Image for Preview */}
-          <div className="w-full h-full pt-10 bg-gradient-to-br from-indigo-900/20 via-background to-background flex items-center justify-center text-muted-foreground/20">
-             <Layout className="w-16 h-16" />
+          <div className="w-full h-full pt-10 bg-linear-to-br from-indigo-900/20 via-background to-background flex items-center justify-center text-muted-foreground/20">
+            <Layout className="w-16 h-16" />
           </div>
           {/* Overlay Info */}
           <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur border border-border px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">

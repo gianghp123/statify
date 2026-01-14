@@ -58,7 +58,7 @@ export default async function LandingPage() {
                     <div className="w-3 h-3 rounded-full bg-warning/20" />
                     <div className="w-3 h-3 rounded-full bg-success/20" />
                   </div>
-                  <div className="text-xs text-muted-foreground font-mono">statify.app/dashboard</div>
+                  <div className="text-xs text-muted-foreground font-mono">{process.env.NEXT_PUBLIC_PROJECT_URL}/dashboard</div>
                   <div className="w-8" />
                 </div>
                 <div className="p-6">
@@ -80,7 +80,7 @@ export default async function LandingPage() {
                               <span className="font-bold text-foreground">my-awesome-site-{i}</span>
                               <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full uppercase tracking-wider">Live</span>
                             </div>
-                            <div className="text-xs text-muted-foreground font-mono">https://site-{i}.statify.app</div>
+                            <div className="text-xs text-muted-foreground font-mono">https://site-{i}.{process.env.NEXT_PUBLIC_PROJECT_URL}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-8 text-xs text-muted-foreground">

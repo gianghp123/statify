@@ -1,13 +1,4 @@
 'use client'
-import { MoreHorizontal, Rocket, History, Trash2, AlertCircle } from "lucide-react";
-import { DeploymentDto } from "../dtos/response/deployment.response.dto";
-import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,10 +9,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
-import { deleteDeployment } from "../services/deployment.actions";
-import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
+import { AlertCircle, History, MoreHorizontal, Play, Rocket, StopCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { DeploymentDto } from "../dtos/response/deployment.response.dto";
+import { deleteDeployment, turnDeploymentLive, turnDeploymentOffline } from "../services/deployment.actions";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -47,6 +47,20 @@ const getStatusBadge = (status: string) => {
           Failed
         </span>
       );
+    case DeploymentStatus.PROCESSING:
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-400/10 px-2.5 py-0.5 text-xs font-medium text-purple-400 border border-purple-400/20">
+          <span className="size-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+          Processing
+        </span>
+      );
+    case DeploymentStatus.LIVE:
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-400/10 px-2.5 py-0.5 text-xs font-medium text-green-400 border border-green-400/20">
+          <span className="size-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
+          Live
+        </span>
+      );
     default:
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/10 px-2.5 py-0.5 text-xs font-medium text-muted-foreground border border-muted/20">
@@ -58,15 +72,20 @@ const getStatusBadge = (status: string) => {
 };
 
 interface DeploymentHistoryTableProps {
-  deployments: DeploymentDto[];
+  initialDeployments: DeploymentDto[];
   projectId: number;
 }
 
-export function DeploymentHistoryTable({ deployments, projectId }: DeploymentHistoryTableProps) {
+export function DeploymentHistoryTable({ initialDeployments, projectId }: DeploymentHistoryTableProps) {
   const router = useRouter();
+  const [deployments, setDeployments] = useState<DeploymentDto[]>(initialDeployments);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedDeployment, setSelectedDeployment] = useState<DeploymentDto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setDeployments(initialDeployments);
+  }, [initialDeployments]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "--";
@@ -119,6 +138,53 @@ export function DeploymentHistoryTable({ deployments, projectId }: DeploymentHis
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
       setSelectedDeployment(null);
+    }
+  };
+
+  const handleTurnLive = async (deploymentId: number) => {
+    try {
+      const res = await turnDeploymentLive(projectId, deploymentId);
+      if (res.success) {
+        toast.success("Deployment is now live");
+        setDeployments((prev) =>
+          prev.map((d) => {
+            if (d.id === deploymentId) {
+              return { ...d, status: DeploymentStatus.LIVE };
+            }
+            if (d.status === DeploymentStatus.LIVE) {
+              return { ...d, status: DeploymentStatus.READY };
+            }
+            return d;
+          })
+        );
+        router.refresh();
+      } else {
+        toast.error(res.message || "Failed to turn deployment live");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  const handleTurnOffline = async (deploymentId: number) => {
+    try {
+      const res = await turnDeploymentOffline(projectId, deploymentId);
+      if (res.success) {
+        toast.success("Deployment is now offline");
+        setDeployments((prev) =>
+          prev.map((d) => {
+            if (d.id === deploymentId) {
+              return { ...d, status: DeploymentStatus.READY };
+            }
+            return d;
+          })
+        );
+        router.refresh();
+      } else {
+        toast.error(res.message || "Failed to turn deployment offline");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
     }
   };
 
@@ -186,7 +252,25 @@ export function DeploymentHistoryTable({ deployments, projectId }: DeploymentHis
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border-border shadow-xl">
-                          <DropdownMenuItem 
+                          {deployment.status === DeploymentStatus.READY && (
+                            <DropdownMenuItem
+                              className="cursor-pointer flex items-center gap-2 font-medium"
+                              onClick={() => handleTurnLive(deployment.id)}
+                            >
+                              <Play className="w-4 h-4 text-green-500" />
+                              Turn Live
+                            </DropdownMenuItem>
+                          )}
+                          {deployment.status === DeploymentStatus.LIVE && (
+                            <DropdownMenuItem
+                              className="cursor-pointer flex items-center gap-2 font-medium"
+                              onClick={() => handleTurnOffline(deployment.id)}
+                            >
+                              <StopCircle className="w-4 h-4 text-orange-500" />
+                              Turn Offline
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer flex items-center gap-2 font-medium"
                             onClick={() => {
                               setSelectedDeployment(deployment);
@@ -228,13 +312,13 @@ export function DeploymentHistoryTable({ deployments, projectId }: DeploymentHis
               Delete Deployment?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground text-base">
-              Are you sure you want to delete deployment <span className="text-foreground font-mono font-bold bg-muted/50 px-1.5 py-0.5 rounded border border-border">#{selectedDeployment?.id}</span>? 
+              Are you sure you want to delete deployment <span className="text-foreground font-mono font-bold bg-muted/50 px-1.5 py-0.5 rounded border border-border">#{selectedDeployment?.id}</span>?
               This will permanently remove the files from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
             <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent font-semibold transition-colors">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all hover:scale-[1.02]"
             >

@@ -1,6 +1,6 @@
 services:
   web:
-    image: nginx:alpine 
+    image: nginx:latest
     container_name: statify-nginx-dev
     # restart: unless-stopped 
     ports:

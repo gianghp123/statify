@@ -139,3 +139,49 @@ func (c *DeploymentController) DeleteDeployment(ctx *gin.Context) {
 	// TODO: Implement actual delete logic with service
 	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Deployment deleted successfully (placeholder)", nil))
 }
+
+func (c *DeploymentController) TurnDeploymentLive(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid deployment ID"))
+		return
+	}
+
+	err = c.service.TurnDeploymentLive(ctx, uint(id), userID)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, core.NewApiResponse[any](http.StatusNoContent, "Deployment turned live successfully", nil))
+}
+
+func (c *DeploymentController) TurnDeploymentOffline(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid deployment ID"))
+		return
+	}
+
+	err = c.service.TurnDeploymentOffline(ctx, uint(id), userID)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, core.NewApiResponse[any](http.StatusNoContent, "Deployment turned offline successfully", nil))
+}

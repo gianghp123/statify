@@ -93,9 +93,9 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="edit-subdomain" className="text-foreground font-semibold">Subdomain</Label>
-            <Button 
-              type="button" 
-              variant="link" 
+            <Button
+              type="button"
+              variant="link"
               className="h-auto p-0 text-xs text-primary"
               onClick={() => setSubdomain(autoSubdomain)}
               disabled={isUpdating || isDeleting}
@@ -113,12 +113,12 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
           />
           <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
             <Globe className="w-3.5 h-3.5" />
-            URL: <span className="text-foreground font-mono">{subdomain || autoSubdomain}.statify.app</span>
+            URL: <span className="text-foreground font-mono">{project.url}</span>
           </p>
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full bg-primary text-primary-foreground font-bold shadow-neon hover:shadow-neon-strong transition-all"
           disabled={isUpdating || isDeleting || (name === project.name && subdomain === project.subdomain)}
         >
@@ -147,11 +147,11 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
               </p>
             </div>
           </div>
-          
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="w-full font-bold border border-red-500/30 hover:bg-red-500 hover:text-foreground transition-all"
                 disabled={isUpdating || isDeleting}
               >
@@ -168,7 +168,7 @@ export function ProjectSettingsDialog({ project, onSuccess }: ProjectSettingsDia
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent">Cancel</AlertDialogCancel>
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={handleDelete}
                   className="bg-red-500 text-foreground hover:bg-red-600 font-bold"
                 >

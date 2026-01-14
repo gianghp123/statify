@@ -47,6 +47,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDto } from "@/features/users/dtos/response/user.response.dto";
 import { logout } from "@/features/auth/services/auth.actions";
+import { Logo } from "./logo";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -69,10 +70,7 @@ export function AppSidebar({ user }: { user: UserDto | undefined }) {
         <SidebarHeader className="p-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <div className="size-8 rounded bg-linear-to-br from-primary to-[#aacc00] dark:to-[#aacc00] flex items-center justify-center text-primary-foreground shadow-[0_0_10px_rgba(204,255,0,0.4)]">
-                <Bolt className="w-5 h-5 fill-current" />
-              </div>
-              <h1 className="text-foreground text-xl font-bold tracking-tight">Statify</h1>
+              <Logo />
             </Link>
             <ThemeToggle />
           </div>

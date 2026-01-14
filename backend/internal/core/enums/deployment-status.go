@@ -14,6 +14,7 @@ const (
 	DeploymentStatusReady      DeploymentStatus = "READY"
 	DeploymentStatusDeleted    DeploymentStatus = "DELETED"
 	DeploymentStatusProcessing DeploymentStatus = "PROCESSING"
+	DeploymentStatusLive       DeploymentStatus = "LIVE"
 )
 
 func (p *DeploymentStatus) Scan(value interface{}) error {

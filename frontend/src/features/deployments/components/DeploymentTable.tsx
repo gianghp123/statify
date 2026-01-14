@@ -1,31 +1,5 @@
-import { Terminal, CheckCircle2, RefreshCw, AlertCircle, Rocket, FlaskConical, MoreHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "Success":
-      return (
-        <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 border border-primary/20 text-primary shadow-neon-brand">
-          <CheckCircle2 className="w-[18px] h-[18px]" />
-        </div>
-      );
-    case "Building":
-      return (
-        <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 border border-primary/20 text-primary animate-pulse">
-          <RefreshCw className="w-[18px] h-[18px] animate-spin" />
-        </div>
-      );
-    case "Failed":
-      return (
-        <div className="flex items-center justify-center size-8 rounded-full bg-error/10 border border-error/20 text-error shadow-neon-accent">
-          <AlertCircle className="w-[18px] h-[18px]" />
-        </div>
-      );
-    default:
-      return null;
-  }
-};
 
 export function DeploymentTable() {
   return (
@@ -54,8 +28,8 @@ export function DeploymentTable() {
           Showing <span className="text-foreground font-medium">1-4</span> of <span className="text-foreground font-medium">248</span> deployments
         </p>
         <div className="flex gap-2">
-           <Button variant="outline" className="h-8 px-3 text-xs" disabled>Previous</Button>
-           <Button variant="outline" className="h-8 px-3 text-xs">Next</Button>
+          <Button variant="outline" className="h-8 px-3 text-xs" disabled>Previous</Button>
+          <Button variant="outline" className="h-8 px-3 text-xs">Next</Button>
         </div>
       </div>
     </div>

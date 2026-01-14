@@ -35,8 +35,8 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-sm mb-6 border-b border-border pb-4">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 font-bold"
         >
           <Folder className="w-4 h-4" />
@@ -51,7 +51,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
         <div className="lg:col-span-2 space-y-12">
           <ProjectOverview project={project} />
           <div className="pt-4">
-            <DeploymentHistoryTable deployments={deployments} projectId={project.id} />
+            <DeploymentHistoryTable initialDeployments={deployments} projectId={project.id} />
           </div>
         </div>
       </div>

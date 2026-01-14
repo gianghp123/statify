@@ -22,5 +22,7 @@ func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gi
 		deployments.POST("", authMiddleware, m.controller.CreateDeployment)
 		deployments.GET("/:id", authMiddleware, m.controller.GetStatus)
 		deployments.DELETE("/:id", authMiddleware, m.controller.DeleteDeployment)
+		deployments.PUT("/:id/live", authMiddleware, m.controller.TurnDeploymentLive)
+		deployments.PUT("/:id/offline", authMiddleware, m.controller.TurnDeploymentOffline)
 	}
 }

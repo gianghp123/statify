@@ -53,7 +53,6 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 
 	err = s.repo.Transaction(ctx, func(tx *gorm.DB) error {
 		txRepo := s.repo.WithTx(tx)
-		txProjectRepo := s.projectRepo.WithTx(tx)
 
 		if err := txRepo.Create(ctx, deployment); err != nil {
 			return err
@@ -62,27 +61,6 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 		// Update output prefix with ID and Timestamp
 		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d-%s", projectID, deployment.ID, deployment.CreatedAt.Format("20060102150405"))
 		if err := txRepo.Update(ctx, deployment); err != nil {
-			return err
-		}
-
-		// Update the project to point to this new active deployment
-		// Set current deployment to offline (within transaction)
-		if project.CurrentDeploymentID != 0 {
-			currentDeployment, err := txRepo.FindByID(ctx, project.CurrentDeploymentID)
-			if err == nil {
-				if currentDeployment.Status == enums.DeploymentStatusReady {
-					currentDeployment.Status = enums.DeploymentStatusUploaded
-					if err := txRepo.Update(ctx, currentDeployment); err != nil {
-						return err
-					}
-				}
-			} else if !core.IsRecordNotFoundError(err) {
-				return err
-			}
-		}
-
-		project.CurrentDeploymentID = deployment.ID
-		if err := txProjectRepo.Update(ctx, project); err != nil {
 			return err
 		}
 
@@ -238,6 +216,10 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		return nil, core.ParseDatabaseError(err)
 	}
 
+	if deployment.Status != enums.DeploymentStatusLive {
+		return nil, core.NotFoundError()
+	}
+
 	if deployment.OutputPrefix == "" {
 		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d", deployment.ProjectID, deployment.ID)
 	}
@@ -278,4 +260,86 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		Headers:     headers,
 		NotModified: false,
 	}, nil
+}
+
+func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID uint, userID uint) error {
+	deployment, err := s.repo.FindByID(ctx, deploymentID)
+
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return core.NotFoundError()
+	}
+
+	if project.UserID != userID {
+		return core.ForbiddenError()
+	}
+
+	if project.CurrentDeploymentID != 0 {
+		return core.BadRequestError("Project already has a live deployment")
+	}
+
+	if deployment == nil {
+		return core.NotFoundError()
+	}
+
+	if deployment.Status != enums.DeploymentStatusReady {
+		return core.BadRequestError("Deployment is not ready or is living")
+	}
+
+	deployment.Status = enums.DeploymentStatusLive
+	if err := s.repo.Update(ctx, deployment); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	project.CurrentDeploymentID = deploymentID
+	if err := s.projectRepo.Update(ctx, project); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	return nil
+}
+
+func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymentID uint, userID uint) error {
+	deployment, err := s.repo.FindByID(ctx, deploymentID)
+
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return core.NotFoundError()
+	}
+
+	if project.UserID != userID {
+		return core.ForbiddenError()
+	}
+
+	if project.CurrentDeploymentID != deploymentID {
+		return core.BadRequestError("Deployment is not the current deployment")
+	}
+
+	deployment.Status = enums.DeploymentStatusReady
+	if err := s.repo.Update(ctx, deployment); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	project.CurrentDeploymentID = 0
+	if err := s.projectRepo.Update(ctx, project); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	return nil
 }

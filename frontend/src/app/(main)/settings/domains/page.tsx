@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 export default function DomainsSettings() {
   const domains = [
-    { name: "myproject.statify.app", type: "System", status: "Active", primary: true },
+    { name: "myproject.{process.env.NEXT_PUBLIC_PROJECT_URL}", type: "System", status: "Active", primary: true },
     { name: "www.myawesomeproject.com", type: "Custom", status: "Verified", primary: false },
     { name: "blog.myawesomeproject.com", type: "Custom", status: "Pending", primary: false },
   ];
@@ -95,7 +95,7 @@ export default function DomainsSettings() {
             {domain.status === 'Pending' && (
               <div className="bg-warning/5 border-t border-warning/10 p-4">
                 <p className="text-xs text-warning leading-relaxed">
-                  <strong>Action Required:</strong> Point your domain's CNAME record to <code>cname.statify.app</code> to complete verification.
+                  <strong>Action Required:</strong> Point your domain's CNAME record to <code>cname.{process.env.NEXT_PUBLIC_PROJECT_URL}</code> to complete verification.
                 </p>
               </div>
             )}

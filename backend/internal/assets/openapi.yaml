@@ -118,9 +118,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/PaginatedApiResponse"
     post:
       tags:
         - Projects
@@ -147,7 +145,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/ApiResponse"
   /projects/{id}:
     get:
       tags:
@@ -167,7 +165,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/ApiResponse"
     put:
       tags:
         - Projects
@@ -206,7 +204,7 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
+        "204":
           description: Project deleted
           content:
             application/json:
@@ -231,9 +229,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Deployment"
+                $ref: "#/components/schemas/PaginatedApiResponse"
     post:
       tags:
         - Deployments
@@ -261,7 +257,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Deployment"
+                $ref: "#/components/schemas/ApiResponse"
   /projects/{project_id}/deployments/{id}:
     get:
       tags:
@@ -286,7 +282,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Deployment"
+                $ref: "#/components/schemas/ApiResponse"
     delete:
       tags:
         - Deployments
@@ -307,6 +303,56 @@ paths:
       responses:
         "200":
           description: Deployment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /projects/{project_id}/deployments/{id}/live:
+    put:
+      tags:
+        - Deployments
+      summary: Set a deployment to live
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deployment turned live
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /projects/{project_id}/deployments/{id}/offline:
+    put:
+      tags:
+        - Deployments
+      summary: Set a deployment to offline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deployment turned offline
           content:
             application/json:
               schema:
@@ -348,7 +394,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/ApiResponse"
     delete:
       tags:
         - Users
@@ -426,7 +472,14 @@ components:
         current_deployment_id:
           type: integer
           nullable: true
+        url:
+          type: string
+        status:
+          $ref: "#/components/schemas/DeploymentStatus"
         created_at:
+          type: string
+          format: date-time
+        updated_at:
           type: string
           format: date-time
     Deployment:
@@ -437,8 +490,7 @@ components:
         project_id:
           type: integer
         status:
-          type: string
-          enum: [QUEUED, UPLOADED, READY, FAILED, DELETED]
+          $ref: "#/components/schemas/DeploymentStatus"
         output_prefix:
           type: string
           nullable: true
@@ -448,13 +500,16 @@ components:
         validation_error:
           type: string
           nullable: true
-        create_at:
+        created_at:
           type: string
           format: date-time
         finished_at:
           type: string
           format: date-time
           nullable: true
+    DeploymentStatus:
+      type: string
+      enum: [QUEUED, FAILED, UPLOADED, READY, DELETED, PROCESSING, LIVE]
     AuthResponse:
       type: object
       properties:
@@ -476,13 +531,35 @@ components:
           type: string
         email:
           type: string
+    Pagination:
+      type: object
+      properties:
+        total_count:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
     ApiResponse:
       type: object
       properties:
-        status:
+        code:
           type: integer
         message:
           type: string
         data:
           type: object
           nullable: true
+    PaginatedApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          $ref: "#/components/schemas/Pagination"

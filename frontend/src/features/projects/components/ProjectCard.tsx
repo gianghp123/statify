@@ -2,7 +2,7 @@
 
 import { ProjectDto } from "../dtos/response/project.response.dto";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
-import { ExternalLink, GitCommit, MoreVertical, AlertCircle } from "lucide-react";
+import { ExternalLink, GitCommit, MoreVertical, AlertCircle, Trash2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -15,19 +15,27 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const getStatusDisplay = (status: DeploymentStatus) => {
     switch (status) {
-      case DeploymentStatus.READY:
+      case DeploymentStatus.LIVE:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
             <span className="size-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(204,255,0,0.8)]"></span>
             LIVE
           </span>
         );
+      case DeploymentStatus.READY:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
+            <CheckCircle2 className="w-3 h-3" />
+            READY
+          </span>
+        );
       case DeploymentStatus.QUEUED:
       case DeploymentStatus.UPLOADED:
+      case DeploymentStatus.PROCESSING:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-bold border border-warning/20">
             <span className="w-3 h-3 animate-spin border-2 border-warning border-t-transparent rounded-full" />
-            BUILDING
+            {status === DeploymentStatus.PROCESSING ? 'PROCESSING' : 'BUILDING'}
           </span>
         );
       case DeploymentStatus.FAILED:
@@ -37,11 +45,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
             FAILED
           </span>
         );
+      case DeploymentStatus.DELETED:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/10 text-muted-foreground text-xs font-bold border border-muted/20 opacity-60">
+            <Trash2 className="w-3 h-3" />
+            DELETED
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/10 text-muted-foreground text-xs font-bold border border-muted/20">
             <span className="size-1.5 rounded-full bg-muted-foreground"></span>
-            {status.toUpperCase()}
+            {status}
           </span>
         );
     }
@@ -49,7 +64,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const getBorderColor = (status: string) => {
     switch (status) {
-      case DeploymentStatus.READY:
+      case DeploymentStatus.LIVE:
         return "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(204,255,0,0.05)]";
       case DeploymentStatus.QUEUED:
       case DeploymentStatus.UPLOADED:
@@ -101,7 +116,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               {getStatusDisplay(project.status)}
             </div>
             <Link
-              href={`https://${project.url}`}
+              href={project.url}
               onClick={(e) => e.stopPropagation()}
               className="font-mono text-muted-foreground hover:text-primary transition-all text-xs flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/50 w-fit hover:border-primary/30"
             >
