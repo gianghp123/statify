@@ -4,12 +4,19 @@ import { getCurrentUser } from "@/features/auth/services/auth.get";
 import { ProjectList } from "@/features/projects/components/ProjectList";
 import { StatCards } from "@/features/projects/components/StatCards";
 import { getProjects } from "@/features/projects/services/project.get";
+import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
+  const status = (await searchParams)?.status as DeploymentStatus || '';
+
   const [projectsRes, userRes] = await Promise.all([
-    getProjects(),
+    getProjects(1, 10, status),
     getCurrentUser(),
   ]);
 
@@ -41,24 +48,24 @@ export default async function DashboardPage() {
       <StatCards projects={projects} />
 
       <div className="flex flex-wrap items-center gap-3 pb-2 border-b border-border">
-        <button className="bg-white/10 text-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-colors border border-white/5">
-          All Projects
-        </button>
-        <button className="text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
-          Live
-        </button>
-        <button className="text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
-          Building
-        </button>
-        <button className="text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
-          Offline
-        </button>
+        <Button asChild className="bg-white/10 text-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-colors border border-white/5">
+          <Link href="/dashboard">All Projects</Link>
+        </Button>
+        <Button asChild className="bg-white/10 text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
+          <Link href={`/dashboard?status=${DeploymentStatus.LIVE}`}>Live</Link>
+        </Button>
+        <Button asChild className="bg-white/10 text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
+          <Link href={`/dashboard?status=${DeploymentStatus.READY}`}>Ready</Link>
+        </Button>
+        <Button asChild className="bg-white/10 text-muted-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:text-foreground hover:bg-white/5 transition-colors">
+          <Link href={`/dashboard?status=${DeploymentStatus.FAILED}`}>Failed</Link>
+        </Button>
       </div>
 
       <ProjectList projects={projects} />
 
       <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
-        <p>© 2024 Statify Inc. Custom Deep Plum Edition.</p>
+        <p>© 2026 Statify Inc. Custom Deep Plum Edition.</p>
       </footer>
     </div>
   );

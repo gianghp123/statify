@@ -125,6 +125,11 @@ paths:
           schema:
             type: integer
             default: 10
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: List of projects

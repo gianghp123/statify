@@ -67,9 +67,13 @@ func (r *DeploymentRepository) FindAllByProjectID(ctx context.Context, projectID
 	return result, nil
 }
 
-func (r *DeploymentRepository) FindLatestByProjectID(ctx context.Context, projectID uint) (*models.Deployment, error) {
+func (r *DeploymentRepository) FindLatestByProjectID(ctx context.Context, projectID uint, status string) (*models.Deployment, error) {
 	var deployment models.Deployment
-	err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Order("created_at DESC").First(&deployment).Error
+	db := r.db.WithContext(ctx).Where("project_id = ?", projectID)
+	if status != "" {
+		db = db.Where("status = ?", status)
+	}
+	err := db.Order("created_at DESC").First(&deployment).Error
 
 	if err != nil {
 		return nil, err

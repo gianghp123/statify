@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gianghp/statify/internal/core"
+	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
 	"github.com/gianghp/statify/internal/modules/project/service"
 	"github.com/gianghp/statify/internal/utils"
@@ -28,7 +29,10 @@ func (c *ProjectController) ListProjects(ctx *gin.Context) {
 	}
 
 	page, limit := utils.GetPaginationConfig(ctx)
-	projects, err := c.service.ListProjects(ctx, userID, page, limit)
+
+	status := ctx.Query("status")
+
+	projects, err := c.service.ListProjects(ctx, userID, page, limit, enums.DeploymentStatus(status))
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return

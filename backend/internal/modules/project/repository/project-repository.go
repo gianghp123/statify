@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"gorm.io/gorm"
@@ -32,7 +33,8 @@ func (r *ProjectRepository) FindByID(ctx context.Context, id uint) (*models.Proj
 	return &project, nil
 }
 
-func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (repository.PaginatedEntities[*models.Project], error) {
+func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, page int, limit int, status enums.DeploymentStatus) (repository.PaginatedEntities[*models.Project], error) {
+	// 1. Initialize result
 	result := repository.PaginatedEntities[*models.Project]{
 		Entities: []*models.Project{},
 		Pagination: repository.Pagination{
@@ -42,13 +44,50 @@ func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, pa
 		},
 	}
 
-	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("user_id = ?", userID)
+	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("projects.user_id = ?", userID)
 
-	if err := db.Count(&result.Pagination.TotalCount).Error; err != nil {
-		return result, err
+	// 3. Conditional Status Filter
+	if status != "" {
+		// Logic:
+		// 1. IF current_deployment_id > 0: Check if the deployment with that ID has the specific status.
+		// 2. OR IF current_deployment_id == 0: Check if the LATEST deployment for this project has the specific status.
+		db = db.Where(`
+			(
+				-- Case A: current_deployment_id is set. Check that specific deployment.
+				(projects.current_deployment_id > 0 AND EXISTS (
+					SELECT 1 FROM deployments d 
+					WHERE d.id = projects.current_deployment_id 
+					AND d.status = ?
+				))
+				OR
+				-- Case B: current_deployment_id is 0 or NULL. Check the latest deployment.
+				((projects.current_deployment_id = 0 OR projects.current_deployment_id IS NULL) AND EXISTS (
+					SELECT 1 FROM deployments d 
+					WHERE d.project_id = projects.id 
+					AND d.status = ?
+					ORDER BY d.created_at DESC 
+					LIMIT 1
+				))
+			)
+		`, status, status)
 	}
 
-	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&result.Entities).Error; err != nil {
+	// 4. Count
+	// Using Scan is safer than Count() to avoid GORM mapping issues with complex WHERE clauses
+	var totalCount int64
+	if err := db.Select("count(distinct projects.id)").Scan(&totalCount).Error; err != nil {
+		return result, err
+	}
+	result.Pagination.TotalCount = totalCount
+
+	// 5. Retrieve Data
+	// Now we fetch the actual entities with Preload
+	if err := db.Preload("Deployments").
+		Distinct("projects.*").
+		Order("projects.created_at DESC").
+		Offset((page - 1) * limit).
+		Limit(limit).
+		Find(&result.Entities).Error; err != nil {
 		return result, err
 	}
 

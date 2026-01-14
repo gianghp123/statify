@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/stretchr/testify/mock"
@@ -18,8 +19,8 @@ func (m *ProjectRepositoryMock) FindByID(ctx context.Context, id uint) (*models.
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
-func (m *ProjectRepositoryMock) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (repository.PaginatedEntities[*models.Project], error) {
-	args := m.Called(ctx, userID, page, limit)
+func (m *ProjectRepositoryMock) FindAllByUserID(ctx context.Context, userID uint, page int, limit int, status enums.DeploymentStatus) (repository.PaginatedEntities[*models.Project], error) {
+	args := m.Called(ctx, userID, page, limit, status)
 	return args.Get(0).(repository.PaginatedEntities[*models.Project]), args.Error(1)
 }
 

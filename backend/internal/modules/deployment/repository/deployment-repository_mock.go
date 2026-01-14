@@ -28,8 +28,8 @@ func (m *DeploymentRepositoryMock) FindAllByProjectID(ctx context.Context, proje
 	return args.Get(0).(repository.PaginatedEntities[*models.Deployment]), args.Error(1)
 }
 
-func (m *DeploymentRepositoryMock) FindLatestByProjectID(ctx context.Context, projectID uint) (*models.Deployment, error) {
-	args := m.Called(ctx, projectID)
+func (m *DeploymentRepositoryMock) FindLatestByProjectID(ctx context.Context, projectID uint, status string) (*models.Deployment, error) {
+	args := m.Called(ctx, projectID, status)
 	return args.Get(0).(*models.Deployment), args.Error(1)
 }
 

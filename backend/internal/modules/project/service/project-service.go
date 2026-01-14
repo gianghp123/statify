@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/gianghp/statify/internal/core"
+	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	deploymentRepo "github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -46,30 +47,28 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *re
 	return projectDto, nil
 }
 
-func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int, limit int) (coreRepo.PaginatedEntities[*response.ProjectDto], error) {
+func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int, limit int, status enums.DeploymentStatus) (coreRepo.PaginatedEntities[*response.ProjectDto], error) {
 	result := coreRepo.PaginatedEntities[*response.ProjectDto]{
 		Entities:   []*response.ProjectDto{},
 		Pagination: coreRepo.Pagination{Page: page, Limit: limit},
 	}
 
-	projects, err := s.repo.FindAllByUserID(ctx, userID, page, limit)
+	projects, err := s.repo.FindAllByUserID(ctx, userID, page, limit, status)
 	if err != nil {
 		return result, core.ParseDatabaseError(err)
 	}
 
-	projectDtos, err := utils.EntitiesToDto[*response.ProjectDto](projects.Entities)
-	if err != nil {
-		return result, core.InternalError()
+	for _, project := range projects.Entities {
+		projectDto, err := s.transformProjectToDto(project)
+		if err != nil {
+			return result, core.InternalError()
+		}
+		result.Entities = append(result.Entities, projectDto)
 	}
 
-	for _, dto := range projectDtos {
-		s.enrichProjectDto(ctx, dto)
-	}
+	result.Pagination = projects.Pagination
 
-	return coreRepo.PaginatedEntities[*response.ProjectDto]{
-		Entities:   projectDtos,
-		Pagination: projects.Pagination,
-	}, nil
+	return result, nil
 }
 
 func (s *ProjectService) GetProjectByID(ctx context.Context, id uint, userID uint) (*response.ProjectDto, error) {
@@ -87,22 +86,31 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id uint, userID uin
 		return nil, core.NotFoundError()
 	}
 
+	projectDto, err := s.transformProjectToDto(project)
+	if err != nil {
+		return nil, core.InternalError()
+	}
+
+	return projectDto, nil
+}
+
+func (s *ProjectService) transformProjectToDto(project *models.Project) (*response.ProjectDto, error) {
 	projectDto, err := utils.EntityToDto[*response.ProjectDto](project)
 	if err != nil {
 		return nil, core.InternalError()
 	}
 
-	s.enrichProjectDto(ctx, projectDto)
+	projectDto.URL = fmt.Sprintf("https://%s.%s", project.Subdomain, utils.GetEnv("DOMAIN", "statify.app"))
+
+	if len(project.Deployments) == 0 {
+		return projectDto, nil
+	}
+
+	latestDeployments := project.Deployments[0]
+
+	projectDto.Status = latestDeployments.Status
 
 	return projectDto, nil
-}
-
-func (s *ProjectService) enrichProjectDto(ctx context.Context, dto *response.ProjectDto) {
-	dto.URL = fmt.Sprintf("https://%s.%s", dto.Subdomain, utils.GetEnv("DOMAIN", "statify.online"))
-	latest, err := s.deploymentRepo.FindLatestByProjectID(ctx, dto.ID)
-	if err == nil && latest != nil {
-		dto.Status = latest.Status
-	}
 }
 
 func (s *ProjectService) UpdateProject(ctx context.Context, id uint, req *request.UpdateProjectRequest) error {
