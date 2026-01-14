@@ -24,17 +24,26 @@ func (r *DeploymentRepository) FindByID(ctx context.Context, id uint) (*models.D
 	return &deployment, nil
 }
 
-func (r *DeploymentRepository) FindAllByProjectID(ctx context.Context, projectID uint) (*repository.PaginatedEntities[models.Deployment], error) {
+func (r *DeploymentRepository) FindAllByProjectID(ctx context.Context, projectID uint, page int, limit int) (*repository.PaginatedEntities[models.Deployment], error) {
 	var deployments []models.Deployment
-	if err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Find(&deployments).Error; err != nil {
+	var totalCount int64
+
+	db := r.db.WithContext(ctx).Model(&models.Deployment{}).Where("project_id = ?", projectID)
+
+	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
+
+	if err := db.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&deployments).Error; err != nil {
+		return nil, err
+	}
+
 	return &repository.PaginatedEntities[models.Deployment]{
 		Entities: deployments,
 		Pagination: repository.Pagination{
-			TotalCount: len(deployments),
-			Page:       1,
-			Limit:      10,
+			TotalCount: totalCount,
+			Page:       page,
+			Limit:      limit,
 		},
 	}, nil
 }

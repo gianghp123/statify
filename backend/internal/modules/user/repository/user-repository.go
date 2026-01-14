@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"gorm.io/gorm"
 )
@@ -23,12 +24,28 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, e
 	return &user, nil
 }
 
-func (r *UserRepository) FindAll(ctx context.Context) ([]*models.User, error) {
-	var users []*models.User
-	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
+func (r *UserRepository) FindAll(ctx context.Context, page int, limit int) (*repository.PaginatedEntities[models.User], error) {
+	var users []models.User
+	var totalCount int64
+
+	db := r.db.WithContext(ctx).Model(&models.User{})
+
+	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return users, nil
+
+	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	return &repository.PaginatedEntities[models.User]{
+		Entities: users,
+		Pagination: repository.Pagination{
+			TotalCount: totalCount,
+			Page:       page,
+			Limit:      limit,
+		},
+	}, nil
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {

@@ -46,8 +46,8 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *re
 	return projectDto, nil
 }
 
-func (s *ProjectService) ListProjects(ctx context.Context, userID uint) (*coreRepo.PaginatedEntities[*response.ProjectDto], error) {
-	projects, err := s.repo.FindAllByUserID(ctx, userID)
+func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int, limit int) (*coreRepo.PaginatedEntities[*response.ProjectDto], error) {
+	projects, err := s.repo.FindAllByUserID(ctx, userID, page, limit)
 	if err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}
@@ -135,7 +135,7 @@ func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, user
 			return core.ForbiddenError()
 		}
 
-		deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, projectID)
+		deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, projectID, 1, 1000)
 		if err != nil {
 			return core.ParseDatabaseError(err)
 		}

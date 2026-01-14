@@ -35,7 +35,8 @@ func (c *DeploymentController) GetHistory(ctx *gin.Context) {
 		return
 	}
 
-	deployments, err := c.service.GetHistory(ctx, userID, uint(projectID))
+	page, limit := utils.GetPaginationConfig(ctx)
+	deployments, err := c.service.GetHistory(ctx, userID, uint(projectID), page, limit)
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return

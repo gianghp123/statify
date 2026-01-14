@@ -27,7 +27,8 @@ func (c *ProjectController) ListProjects(ctx *gin.Context) {
 		return
 	}
 
-	projects, err := c.service.ListProjects(ctx, userID)
+	page, limit := utils.GetPaginationConfig(ctx)
+	projects, err := c.service.ListProjects(ctx, userID, page, limit)
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return

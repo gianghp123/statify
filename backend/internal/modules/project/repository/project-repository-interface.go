@@ -11,7 +11,7 @@ import (
 type IProjectRepository interface {
 	FindBySubdomain(ctx context.Context, subdomain string) (*models.Project, error)
 	FindByID(ctx context.Context, id uint) (*models.Project, error)
-	FindAllByUserID(ctx context.Context, userID uint) (*repository.PaginatedEntities[models.Project], error)
+	FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (*repository.PaginatedEntities[models.Project], error)
 	Create(ctx context.Context, project *models.Project) error
 	Update(ctx context.Context, project *models.Project) error
 	Delete(ctx context.Context, project *models.Project) error

@@ -296,8 +296,9 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 			projectID: 1,
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
 				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
-				repo.On("FindAllByProjectID", mock.Anything, uint(1)).Return(&coreRepo.PaginatedEntities[models.Deployment]{
-					Entities: []models.Deployment{{ProjectID: 1}},
+				repo.On("FindAllByProjectID", mock.Anything, uint(1), 1, 10).Return(&coreRepo.PaginatedEntities[models.Deployment]{
+					Entities:   []models.Deployment{{ProjectID: 1}},
+					Pagination: coreRepo.Pagination{TotalCount: 1, Page: 1, Limit: 10},
 				}, nil)
 			},
 			expectedFunc: func(t *testing.T, deployments *coreRepo.PaginatedEntities[*response.DeploymentDto], err error) {
@@ -313,7 +314,7 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			tt.setupMocks(repo, projectRepo)
 			s := NewDeploymentService(repo, projectRepo, nil)
-			deployments, err := s.GetHistory(context.TODO(), tt.userID, tt.projectID)
+			deployments, err := s.GetHistory(context.TODO(), tt.userID, tt.projectID, 1, 10)
 			tt.expectedFunc(t, deployments, err)
 		})
 	}

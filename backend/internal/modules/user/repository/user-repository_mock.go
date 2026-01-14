@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/stretchr/testify/mock"
 )
@@ -16,9 +17,9 @@ func (m *UserRepositoryMock) FindByID(ctx context.Context, id uint) (*models.Use
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *UserRepositoryMock) FindAll(ctx context.Context) ([]*models.User, error) {
-	args := m.Called(ctx)
-	return args.Get(0).([]*models.User), args.Error(1)
+func (m *UserRepositoryMock) FindAll(ctx context.Context, page int, limit int) (*repository.PaginatedEntities[models.User], error) {
+	args := m.Called(ctx, page, limit)
+	return args.Get(0).(*repository.PaginatedEntities[models.User]), args.Error(1)
 }
 
 func (m *UserRepositoryMock) FindByEmail(ctx context.Context, email string) (*models.User, error) {

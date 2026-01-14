@@ -136,7 +136,7 @@ func (s *DeploymentService) uploadFileToMinio(ctx context.Context, outputPrefix 
 	return err
 }
 
-func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, projectID uint) (*coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
+func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, projectID uint, page int, limit int) (*coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
 	project, err := s.projectRepo.FindByID(ctx, projectID)
 	if err != nil {
 		return nil, core.ParseDatabaseError(err)
@@ -150,7 +150,7 @@ func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, project
 		return nil, core.ForbiddenError()
 	}
 
-	deployments, err := s.repo.FindAllByProjectID(ctx, projectID)
+	deployments, err := s.repo.FindAllByProjectID(ctx, projectID, page, limit)
 	if err != nil {
 		return nil, core.ParseDatabaseError(err)
 	}

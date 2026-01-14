@@ -86,7 +86,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 			name:   "List projects successfully",
 			userID: 1,
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock) {
-				repo.On("FindAllByUserID", mock.Anything, uint(1)).Return(&coreRepo.PaginatedEntities[models.Project]{
+				repo.On("FindAllByUserID", mock.Anything, uint(1), 1, 10).Return(&coreRepo.PaginatedEntities[models.Project]{
 					Entities: []models.Project{{Model: gorm.Model{ID: 1}, Name: "P1"}},
 				}, nil)
 				dRepo.On("FindLatestByProjectID", mock.Anything, uint(1)).Return(&models.Deployment{Status: enums.DeploymentStatusReady}, nil)
@@ -101,7 +101,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 			name:   "List projects successfully with no deployment",
 			userID: 1,
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock) {
-				repo.On("FindAllByUserID", mock.Anything, uint(1)).Return(&coreRepo.PaginatedEntities[models.Project]{
+				repo.On("FindAllByUserID", mock.Anything, uint(1), 1, 10).Return(&coreRepo.PaginatedEntities[models.Project]{
 					Entities: []models.Project{{Model: gorm.Model{ID: 1}, Name: "P1"}},
 				}, nil)
 				dRepo.On("FindLatestByProjectID", mock.Anything, uint(1)).Return((*models.Deployment)(nil), gorm.ErrRecordNotFound)
@@ -116,7 +116,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 			name:   "List projects failure",
 			userID: 1,
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock) {
-				repo.On("FindAllByUserID", mock.Anything, uint(1)).Return((*coreRepo.PaginatedEntities[models.Project])(nil), errors.New("db error"))
+				repo.On("FindAllByUserID", mock.Anything, uint(1), 1, 10).Return((*coreRepo.PaginatedEntities[models.Project])(nil), errors.New("db error"))
 			},
 			expectedFunc: func(t *testing.T, projects *coreRepo.PaginatedEntities[*response.ProjectDto], err error) {
 				assert.Error(t, err)
@@ -132,7 +132,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 			minioMock := new(minio.Mock)
 			tt.setupMocks(repo, dRepo)
 			s := NewProjectService(repo, dRepo, minioMock)
-			projects, err := s.ListProjects(context.TODO(), tt.userID)
+			projects, err := s.ListProjects(context.TODO(), tt.userID, 1, 10)
 			tt.expectedFunc(t, projects, err)
 		})
 	}
@@ -210,7 +210,7 @@ func TestProjectService_DeleteProject(t *testing.T) {
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
 				project := &models.Project{Model: gorm.Model{ID: 1}, UserID: 1}
 				repo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
-				dRepo.On("FindAllByProjectID", mock.Anything, uint(1)).Return(&coreRepo.PaginatedEntities[models.Deployment]{
+				dRepo.On("FindAllByProjectID", mock.Anything, uint(1), 1, 1000).Return(&coreRepo.PaginatedEntities[models.Deployment]{
 					Entities: []models.Deployment{{Model: gorm.Model{ID: 10}, OutputPrefix: "deployments/1/10"}},
 				}, nil)
 				repo.On("Delete", mock.Anything, project).Return(nil)

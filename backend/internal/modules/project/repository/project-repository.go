@@ -32,17 +32,26 @@ func (r *ProjectRepository) FindByID(ctx context.Context, id uint) (*models.Proj
 	return &project, nil
 }
 
-func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint) (*repository.PaginatedEntities[models.Project], error) {
+func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, page int, limit int) (*repository.PaginatedEntities[models.Project], error) {
 	var projects []models.Project
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&projects).Error; err != nil {
+	var totalCount int64
+
+	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("user_id = ?", userID)
+
+	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
+
+	if err := db.Offset((page - 1) * limit).Limit(limit).Find(&projects).Error; err != nil {
+		return nil, err
+	}
+
 	return &repository.PaginatedEntities[models.Project]{
 		Entities: projects,
 		Pagination: repository.Pagination{
-			TotalCount: len(projects),
-			Page:       1,
-			Limit:      10,
+			TotalCount: totalCount,
+			Page:       page,
+			Limit:      limit,
 		},
 	}, nil
 }
