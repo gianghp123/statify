@@ -144,7 +144,7 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
 		return
 	}
 
-	ctx.DataFromReader(http.StatusOK, fileDTO.Size, fileDTO.ContentType, fileDTO.Stream, fileDTO.Headers)
+	ctx.DataFromReader(fileDTO.StatusCode, fileDTO.Size, fileDTO.ContentType, fileDTO.Stream, fileDTO.Headers)
 }
 
 func (c *DeploymentController) DeleteDeployment(ctx *gin.Context) {
@@ -202,4 +202,27 @@ func (c *DeploymentController) TurnDeploymentOffline(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, core.NewApiResponse[any](http.StatusNoContent, "Deployment turned offline successfully", nil))
+}
+
+func (c *DeploymentController) ToggleIsSPAMode(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid deployment ID"))
+		return
+	}
+
+	err = c.service.ToggleIsSPAMode(ctx, uint(id), userID)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, core.NewApiResponse[any](http.StatusNoContent, "Deployment is SPA mode toggled successfully", nil))
 }

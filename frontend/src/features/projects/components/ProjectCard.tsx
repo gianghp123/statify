@@ -69,6 +69,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </div>
             <Link
               href={project.url}
+              target="_blank"
               onClick={(e) => e.stopPropagation()}
               className="font-mono text-muted-foreground hover:text-primary transition-all text-xs flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/50 w-fit hover:border-primary/30"
             >

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"mime"
+	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
@@ -226,24 +228,12 @@ func (s *DeploymentService) uploadFileToMinio(ctx context.Context, outputPrefix 
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {
 	project, err := s.projectRepo.FindBySubdomain(ctx, subdomain)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return nil, core.NotFoundError()
-	}
-
-	if project.CurrentDeploymentID == 0 {
+	if err != nil || project == nil || project.CurrentDeploymentID == 0 {
 		return nil, core.NotFoundError()
 	}
 
 	deployment, err := s.repo.FindByID(ctx, project.CurrentDeploymentID)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if deployment.Status != enums.DeploymentStatusLive {
+	if err != nil || deployment.Status != enums.DeploymentStatusLive {
 		return nil, core.NotFoundError()
 	}
 
@@ -251,31 +241,68 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d", deployment.ProjectID, deployment.ID)
 	}
 
-	objectPath := fmt.Sprintf("%s/%s", deployment.OutputPrefix, fileName)
-
-	stat, err := s.minioClient.StatObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), objectPath, minioGo.StatObjectOptions{})
-
-	if err != nil {
-		// Return specific error so controller knows if it's 404 or 500
-		return nil, core.ParseMinioError(err)
+	cleanFileName := strings.TrimPrefix(fileName, "/")
+	if cleanFileName == "" {
+		cleanFileName = "index.html"
 	}
 
-	// 2. Prepare Headers
+	bucket := utils.GetEnv("MINIO_BUCKET", "static-sites")
+	objectPath := fmt.Sprintf("%s/%s", deployment.OutputPrefix, cleanFileName)
+
+	stat, err := s.minioClient.StatObject(ctx, bucket, objectPath, minioGo.StatObjectOptions{})
+
+	if err != nil {
+		// The request is a "Route" (No extension like .js, .png) ---
+		if !strings.Contains(cleanFileName, ".") {
+
+			// Clean URL (e.g. /about -> about.html)
+			tryPath := objectPath + ".html"
+			if statH, errH := s.minioClient.StatObject(ctx, bucket, tryPath, minioGo.StatObjectOptions{}); errH == nil {
+				return s.serveS3Object(ctx, bucket, tryPath, statH, http.StatusOK, clientETag)
+			}
+
+			// Try Folder Index (e.g. /contact -> contact/index.html)
+			tryPath = strings.TrimSuffix(objectPath, "/") + "/index.html"
+			if statF, errF := s.minioClient.StatObject(ctx, bucket, tryPath, minioGo.StatObjectOptions{}); errF == nil {
+				return s.serveS3Object(ctx, bucket, tryPath, statF, http.StatusOK, clientETag)
+			}
+
+			// SPA FALLBACK
+			if deployment.IsSPA {
+				spaPath := fmt.Sprintf("%s/index.html", deployment.OutputPrefix)
+				if statSPA, errSPA := s.minioClient.StatObject(ctx, bucket, spaPath, minioGo.StatObjectOptions{}); errSPA == nil {
+					return s.serveS3Object(ctx, bucket, spaPath, statSPA, http.StatusOK, clientETag)
+				}
+			}
+		}
+
+		// 404.html
+		return s.handleErrorFallback(ctx, deployment)
+	}
+	return s.serveS3Object(ctx, bucket, objectPath, stat, http.StatusOK, clientETag)
+}
+
+func (s *DeploymentService) serveS3Object(ctx context.Context, bucket, path string, stat minioGo.ObjectInfo, status int, clientETag string) (*response.FileDownloadDto, error) {
+
 	headers := map[string]string{
 		"Cache-Control":          "public, max-age=3600",
 		"ETag":                   stat.ETag,
 		"X-Content-Type-Options": "nosniff",
 	}
 
-	if clientETag == stat.ETag {
+	if strings.Contains(path, "/assets/") {
+		headers["Cache-Control"] = "public, max-age=31536000, immutable"
+	}
+
+	if clientETag != "" && clientETag == stat.ETag {
 		return &response.FileDownloadDto{
 			NotModified: true,
 			Headers:     headers,
+			StatusCode:  http.StatusNotModified,
 		}, nil
 	}
 
-	// 3. Return DTO with stream
-	obj, err := s.minioClient.GetObject(context.Background(), utils.GetEnv("MINIO_BUCKET", "static-sites"), objectPath, minioGo.GetObjectOptions{})
+	obj, err := s.minioClient.GetObject(ctx, bucket, path, minioGo.GetObjectOptions{})
 	if err != nil {
 		return nil, core.ParseMinioError(err)
 	}
@@ -284,9 +311,20 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		Stream:      obj,
 		Size:        stat.Size,
 		ContentType: stat.ContentType,
-		Headers:     headers,
 		NotModified: false,
+		StatusCode:  status,
 	}, nil
+}
+
+func (s *DeploymentService) handleErrorFallback(ctx context.Context, deployment *models.Deployment) (*response.FileDownloadDto, error) {
+	bucket := utils.GetEnv("MINIO_BUCKET", "static-sites")
+	notFoundPath := fmt.Sprintf("%s/404.html", deployment.OutputPrefix)
+
+	if stat, err := s.minioClient.StatObject(ctx, bucket, notFoundPath, minioGo.StatObjectOptions{}); err == nil {
+		return s.serveS3Object(ctx, bucket, notFoundPath, stat, http.StatusNotFound, "")
+	}
+
+	return nil, core.NotFoundError()
 }
 
 func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID uint, userID uint) error {
@@ -365,6 +403,34 @@ func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymen
 
 	project.CurrentDeploymentID = 0
 	if err := s.projectRepo.Update(ctx, project); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	return nil
+}
+
+func (s *DeploymentService) ToggleIsSPAMode(ctx context.Context, deploymentID uint, userID uint) error {
+	deployment, err := s.repo.FindByID(ctx, deploymentID)
+
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
+	if err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	if project == nil {
+		return core.NotFoundError()
+	}
+
+	if project.UserID != userID {
+		return core.ForbiddenError()
+	}
+
+	deployment.IsSPA = !deployment.IsSPA
+	if err := s.repo.Update(ctx, deployment); err != nil {
 		return core.ParseDatabaseError(err)
 	}
 

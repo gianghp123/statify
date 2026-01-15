@@ -8,4 +8,5 @@ export interface DeploymentDto {
   validationError?: string;
   createdAt: string;
   finishedAt?: string;
+  isSPA: boolean;
 }

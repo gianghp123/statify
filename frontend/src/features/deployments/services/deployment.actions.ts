@@ -34,3 +34,10 @@ export async function turnDeploymentOffline(projectId: number, id: number) {
     withCredentials: true,
   });
 }
+
+export async function toggleIsSPAMode(id: number) {
+  return apiFetch<BaseResponse<void>>(`/deployments/${id}/toggle-spa-mode`, {
+    method: "PUT",
+    withCredentials: true,
+  });
+}

@@ -10,21 +10,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
-import { AlertCircle, History, MoreHorizontal, Play, Rocket, StopCircle, Trash2 } from "lucide-react";
+import { AlertCircle, History, Info, MoreHorizontal, Play, Rocket, StopCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DeploymentDto } from "../dtos/response/deployment.response.dto";
-import { deleteDeployment, turnDeploymentLive, turnDeploymentOffline } from "../services/deployment.actions";
+import { deleteDeployment, toggleIsSPAMode, turnDeploymentLive, turnDeploymentOffline } from "../services/deployment.actions";
 import { calculateDuration, formatDate } from "@/lib/utils/time.utils";
 import { getStatusBadge } from "../utils/get-status-badge";
 import { Pagination } from "@/lib/response/api-response";
+import { Switch } from "@/components/ui/switch";
 
 interface DeploymentHistoryTableProps {
   initialDeployments: DeploymentDto[];
@@ -80,7 +86,6 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
             return d;
           })
         );
-        router.refresh();
       } else {
         toast.error(res.message || "Failed to turn deployment live");
       }
@@ -102,9 +107,29 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
             return d;
           })
         );
-        router.refresh();
       } else {
         toast.error(res.message || "Failed to turn deployment offline");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  const handleSpaToggle = async (deploymentId: number, checked: boolean) => {
+    try {
+      const res = await toggleIsSPAMode(deploymentId);
+      if (res.success) {
+        toast.success("Deployment SPA mode is now " + (checked ? "on" : "off"));
+        setDeployments((prev) =>
+          prev.map((d) => {
+            if (d.id === deploymentId) {
+              return { ...d, isSPA: checked };
+            }
+            return d;
+          })
+        );
+      } else {
+        toast.error(res.message || "Failed to toggle SPA mode");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
@@ -126,6 +151,19 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
               <tr className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 <th className="px-6 py-4">Deployment ID</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">
+                  <div className="flex items-center gap-1.5">
+                    SPA
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground/70 hover:text-primary transition-colors cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[250px] font-normal tracking-normal normal-case">
+                        <p>If SPA is on, your application will be considered Single Page Application. Choosing this wrong will cause the deployment not working properly.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </th>
                 <th className="px-6 py-4">Context</th>
                 <th className="px-6 py-4">Created</th>
                 <th className="px-6 py-4">Duration</th>
@@ -154,6 +192,12 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(deployment.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Switch
+                        checked={!!deployment.isSPA}
+                        onCheckedChange={(checked) => handleSpaToggle(deployment.id, checked)}
+                      />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-foreground font-medium">
                       <div className="flex items-center gap-1.5">

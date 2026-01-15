@@ -494,6 +494,32 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 				assert.Nil(t, fileDTO)
 			},
 		},
+		{
+			name:      "Page not found with custom 404",
+			subdomain: "testing",
+			fileName:  "about/",
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
+				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive, OutputPrefix: "deployments/10/50"}
+
+				projectRepo.On("FindBySubdomain", mock.Anything, "testing").Return(project, nil)
+				repo.On("FindByID", mock.Anything, uint(50)).Return(deployment, nil)
+
+				minioClient.On("StatObject", mock.Anything, "static-sites", "deployments/10/50/about/index.html", mock.Anything).
+					Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
+
+				minioClient.On("StatObject", mock.Anything, "static-sites", "deployments/10/50/404.html", mock.Anything).
+					Return(minioGo.ObjectInfo{}, nil)
+
+				minioClient.On("GetObject", mock.Anything, "static-sites", "deployments/10/50/404.html", mock.Anything).
+					Return(&minioGo.Object{}, nil)
+			},
+			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, fileDTO)
+				assert.False(t, fileDTO.NotModified)
+			},
+		},
 	}
 
 	for _, tt := range tests {

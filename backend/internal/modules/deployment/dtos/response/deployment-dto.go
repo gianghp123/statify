@@ -13,4 +13,5 @@ type DeploymentDto struct {
 	ValidationError *string                    `json:"validation_error,omitempty"`
 	CreatedAt       time.Time                  `json:"created_at"`
 	FinishedAt      *time.Time                 `json:"finished_at,omitempty"`
+	IsSPA           bool                       `json:"is_SPA"`
 }

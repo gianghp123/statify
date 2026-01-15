@@ -16,4 +16,6 @@ type FileDownloadDto struct {
 
 	// If true, Controller should send 304 and NOT read the Stream
 	NotModified bool
+
+	StatusCode int
 }

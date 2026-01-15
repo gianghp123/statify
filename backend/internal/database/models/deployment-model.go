@@ -12,4 +12,5 @@ type Deployment struct {
 	Status          enums.DeploymentStatus `gorm:"default:'UPLOADED';type:deployment_status"`
 	OutputPrefix    string                 `gorm:"not null"`
 	ValidationError string
+	IsSPA           bool `gorm:"default:false"`
 }
