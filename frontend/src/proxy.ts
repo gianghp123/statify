@@ -1,41 +1,36 @@
-import { decodeJwt } from 'jose';
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { decodeJwt } from "jose";
 
-const publicPaths = ['/', '/login', '/register', '/docs'];
-
+const publicPaths = ['/', '/login', '/register'];
+const publicPrefixes = ['/documentation'];
 
 export async function proxy(request: NextRequest) {
-  const loginUrl = new URL('/login', request.url);
   const { pathname } = request.nextUrl;
-
-  const isPublicPath = publicPaths.some((path) => pathname === path);
-
+  const loginUrl = new URL('/login', request.url);
   const token = request.cookies.get('auth-token')?.value;
 
-  if (!token && !isPublicPath) {
+  const isPublicPath = publicPaths.includes(pathname) ||
+    publicPrefixes.some(prefix => pathname.startsWith(prefix));
+
+  if (isPublicPath) {
+    return NextResponse.next();
+  }
+
+  if (!token) {
     return NextResponse.redirect(loginUrl);
   }
-
-  if (token && !isPublicPath) {
-    try {
-      const claims = decodeJwt(token)
-      if (claims.exp) {
-        const isExpired = claims.exp * 1000 < Date.now()
-
-        if (isExpired) {
-          return NextResponse.redirect(loginUrl)
-        }
-      }
-      return NextResponse.next()
-    } catch (error) {
-      const res = NextResponse.redirect(loginUrl);
-      res.cookies.delete('auth-token');
-      return res;
+  try {
+    const claims = decodeJwt(token);
+    if (claims.exp && claims.exp * 1000 < Date.now()) {
+      return NextResponse.redirect(loginUrl);
     }
+    return NextResponse.next();
+  } catch (error) {
+    const res = NextResponse.redirect(loginUrl);
+    res.cookies.delete('auth-token');
+    return res;
   }
-
-  return NextResponse.next();
 }
 
 export const config = {

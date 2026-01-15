@@ -37,10 +37,6 @@ export default function SettingsPage() {
           </Link>
         ))}
       </div>
-
-      <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
-        <p>© 2024 Statify Inc. Custom Deep Plum Edition.</p>
-      </footer>
     </div>
   );
 }

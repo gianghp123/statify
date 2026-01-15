@@ -11,16 +11,10 @@ export default async function DeploymentsPage() {
     totalCount: 0
   };
 
-  console.log(deploymentRes);
-
   return (
     <div className="space-y-8">
       <DeploymentListHeader />
       <DeploymentTable deployments={deployments} pagination={pagination} />
-
-      <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
-        <p>© 2026 Statify. All rights reserved.</p>
-      </footer>
     </div>
   );
 }

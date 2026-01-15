@@ -14,6 +14,7 @@ import {
   User
 } from "lucide-react";
 import Link from "next/link";
+import { Footer } from "react-day-picker";
 
 export default async function LandingPage() {
   const userRes = await getCurrentUser();
@@ -45,7 +46,7 @@ export default async function LandingPage() {
                 <Link href="/register">Deploy Now — It's Free</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-border/50 hover:bg-accent/50 px-8 py-6 rounded-2xl text-lg font-bold w-full sm:w-auto text-foreground transition-all">
-                <Link href="/docs">View Documentation</Link>
+                <Link href="/documentation">View Documentation</Link>
               </Button>
             </div>
 
@@ -185,29 +186,6 @@ export default async function LandingPage() {
           <p className="mt-6 text-sm text-muted-foreground">No credit card required to get started.</p>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="py-12 border-t border-border/50 bg-background/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-primary rounded flex items-center justify-center shadow-[0_0_8px_var(--neon-brand-glow)]">
-                <Bolt size={14} className="text-primary-foreground fill-current" />
-              </div>
-              <span className="font-bold text-foreground">Statify</span>
-            </div>
-            <div className="flex gap-8 text-sm text-muted-foreground">
-              <Link className="hover:text-primary transition-colors" href="#">Privacy</Link>
-              <Link className="hover:text-primary transition-colors" href="#">Terms</Link>
-              <Link className="hover:text-primary transition-colors" href="#">Status</Link>
-              <Link className="hover:text-primary transition-colors" href="#">Contact</Link>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Statify Inc. Modern Edition.
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

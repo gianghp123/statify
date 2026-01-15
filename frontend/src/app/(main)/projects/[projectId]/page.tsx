@@ -56,10 +56,6 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
           </div>
         </div>
       </div>
-
-      <footer className="mt-20 mb-10 flex justify-center text-[10px] uppercase tracking-widest text-muted-foreground/40 font-bold">
-        <p>© 2024 Statify Inc. Modern Cloud Platform.</p>
-      </footer>
     </div>
   );
 }

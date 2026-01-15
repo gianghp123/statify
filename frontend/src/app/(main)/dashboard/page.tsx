@@ -63,10 +63,6 @@ export default async function DashboardPage({
       </div>
 
       <ProjectList projects={projects} />
-
-      <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
-        <p>© 2026 Statify Inc. Custom Deep Plum Edition.</p>
-      </footer>
     </div>
   );
 }

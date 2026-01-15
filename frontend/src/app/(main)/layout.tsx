@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { Footer } from "@/components/footer";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { logout } from "@/features/auth/services/auth.actions";
 import { getCurrentUser } from "@/features/auth/services/auth.get";
@@ -63,6 +64,7 @@ export default async function MainLayout({
               {children}
             </div>
           </main>
+          <Footer />
         </div>
       </div>
     </SidebarProvider>

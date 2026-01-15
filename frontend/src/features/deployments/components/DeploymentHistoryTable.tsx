@@ -283,7 +283,7 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
               This will permanently remove the files from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
+          <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent font-semibold transition-colors">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}

@@ -69,9 +69,7 @@ export function AppSidebar({ user }: { user: UserDto | undefined }) {
       <Sidebar className="bg-sidebar border-r border-sidebar-border shadow-2xl dark:shadow-black/50">
         <SidebarHeader className="p-6">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <Logo />
-            </Link>
+            <Logo />
             <ThemeToggle />
           </div>
         </SidebarHeader>

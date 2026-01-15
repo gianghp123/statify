@@ -13,7 +13,7 @@ interface AnalyticsPageProps {
 
 export default function AnalyticsPage({ params }: AnalyticsPageProps) {
   const { projectId } = use(params);
-  
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
@@ -27,22 +27,22 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             </p>
           </div>
           <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1 pr-4 shadow-xl">
-             <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
-               &larr;
-             </Button>
-             <div className="flex items-center gap-2 text-foreground text-sm font-medium px-2">
-               <Calendar className="w-4 h-4 text-primary" />
-               <span>Oct 01, 2023 - Oct 31, 2023</span>
-             </div>
-             <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
-               &rarr;
-             </Button>
+            <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
+              &larr;
+            </Button>
+            <div className="flex items-center gap-2 text-foreground text-sm font-medium px-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span>Oct 01, 2023 - Oct 31, 2023</span>
+            </div>
+            <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
+              &rarr;
+            </Button>
           </div>
         </div>
       </div>
 
       <AnalyticsStats />
-      
+
       <div className="glass-card rounded-xl p-6 border border-border shadow-xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -64,15 +64,11 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             </Button>
           </div>
         </div>
-        
+
         <AnalyticsCharts />
       </div>
 
       <ContentTable />
-
-      <footer className="mt-12 mb-6 flex justify-center text-xs text-muted-foreground/50">
-        <p>© 2024 Statify Inc. Custom Deep Plum Edition.</p>
-      </footer>
     </div>
   );
 }

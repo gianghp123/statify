@@ -18,6 +18,7 @@ export function LandingTopbar({ user }: { user: UserDto | undefined }) {
         <Logo />
         <div className="hidden md:flex items-center gap-8">
           <Link href="#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">Features</Link>
+          <Link href="/documentation" className="text-sm text-muted-foreground hover:text-primary transition-colors">Docs</Link>
           <Link href="#workflow" className="text-sm text-muted-foreground hover:text-primary transition-colors">Workflow</Link>
           <Link href="#pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
         </div>
