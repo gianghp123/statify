@@ -164,7 +164,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
-  /projects/{id}:
+  /projects/{project_id}:
     get:
       tags:
         - Projects
@@ -172,7 +172,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: project_id
           in: path
           required: true
           schema:
@@ -191,7 +191,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: project_id
           in: path
           required: true
           schema:
@@ -216,7 +216,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: project_id
           in: path
           required: true
           schema:
@@ -260,34 +260,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedApiResponse"
-
-  /deployments:
-    get:
-      tags:
-        - Deployments
-      summary: Get Global Deployment History
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-      responses:
-        "200":
-          description: Global deployment history
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaginatedApiResponse"
     post:
       tags:
         - Deployments
@@ -316,6 +288,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
+
+  /deployments:
+    get:
+      tags:
+        - Deployments
+      summary: Get Global Deployment History
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Global deployment history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedApiResponse"
+  /deployments/{id}/toggle-spa-mode:
+    put:
+      tags:
+        - Deployments
+      summary: Toggle SPA mode for a deployment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SPA mode toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /deployments/{id}/:
+    delete:
+      tags:
+        - Deployments
+      summary: Delete a deployment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deployment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   /projects/{project_id}/deployments/{id}:
     get:
       tags:
@@ -525,11 +567,6 @@ components:
           type: string
         subdomain:
           type: string
-        user_id:
-          type: integer
-        current_deployment_id:
-          type: integer
-          nullable: true
         url:
           type: string
         status:
@@ -545,16 +582,10 @@ components:
       properties:
         id:
           type: integer
-        project_id:
-          type: integer
+        project:
+          $ref: "#/components/schemas/Project"
         status:
           $ref: "#/components/schemas/DeploymentStatus"
-        output_prefix:
-          type: string
-          nullable: true
-        source_zip_object_key:
-          type: string
-          nullable: true
         validation_error:
           type: string
           nullable: true
@@ -565,6 +596,8 @@ components:
           type: string
           format: date-time
           nullable: true
+        is_SPA:
+          type: boolean
     DeploymentStatus:
       type: string
       enum: [QUEUED, FAILED, UPLOADED, READY, DELETED, PROCESSING, LIVE]

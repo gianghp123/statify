@@ -61,3 +61,11 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 
 	return nil
 }
+
+func (c *Client) RemoveObjects(ctx context.Context, bucketName string, objectsCh <-chan minioGo.ObjectInfo, opts minioGo.RemoveObjectsOptions) <-chan minioGo.RemoveObjectError {
+	return c.client.RemoveObjects(ctx, bucketName, objectsCh, opts)
+}
+
+func (c *Client) ListObjects(ctx context.Context, bucketName string, opts minioGo.ListObjectsOptions) <-chan minioGo.ObjectInfo {
+	return c.client.ListObjects(ctx, bucketName, opts)
+}

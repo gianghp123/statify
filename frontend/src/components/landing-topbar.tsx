@@ -1,13 +1,12 @@
 'use client'
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { logout } from "@/features/auth/services/auth.actions"
 import { UserDto } from "@/features/users/dtos/response/user.response.dto"
-import { Bolt } from "lucide-react"
 import Link from "next/link"
+import { Logo } from "./logo"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
-import { logout } from "@/features/auth/services/auth.actions"
-import { Logo } from "./logo"
 
 
 export function LandingTopbar({ user }: { user: UserDto | undefined }) {

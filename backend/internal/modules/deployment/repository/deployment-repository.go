@@ -99,3 +99,7 @@ func (r *DeploymentRepository) WithTx(tx *gorm.DB) IDeploymentRepository {
 	}
 	return &DeploymentRepository{db: tx}
 }
+
+func (r *DeploymentRepository) Delete(ctx context.Context, deployment *models.Deployment) error {
+	return r.db.WithContext(ctx).Unscoped().Delete(deployment).Error
+}

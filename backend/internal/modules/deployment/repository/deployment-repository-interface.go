@@ -15,6 +15,7 @@ type IDeploymentRepository interface {
 	FindLatestByProjectID(ctx context.Context, projectID uint, status string) (*models.Deployment, error)
 	Create(ctx context.Context, deployment *models.Deployment) error
 	Update(ctx context.Context, deployment *models.Deployment) error
+	Delete(ctx context.Context, deployment *models.Deployment) error
 	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) IDeploymentRepository
 }

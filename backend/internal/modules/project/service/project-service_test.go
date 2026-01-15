@@ -36,6 +36,7 @@ func TestProjectService_CreateProject(t *testing.T) {
 				Subdomain: "test-project",
 			},
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
+				repo.On("FindBySubdomain", mock.Anything, "test-project").Return((*models.Project)(nil), gorm.ErrRecordNotFound)
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(p *models.Project) bool {
 					return p.Name == "Test Project" && p.Subdomain == "test-project" && p.UserID == 1
 				})).Return(nil)
@@ -49,8 +50,9 @@ func TestProjectService_CreateProject(t *testing.T) {
 		{
 			name:    "Create project failure",
 			userID:  1,
-			request: &request.CreateProjectRequest{Name: "Fail"},
+			request: &request.CreateProjectRequest{Name: "Fail", Subdomain: "test-project"},
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
+				repo.On("FindBySubdomain", mock.Anything, "test-project").Return((*models.Project)(nil), gorm.ErrRecordNotFound)
 				repo.On("Create", mock.Anything, mock.Anything).Return(errors.New("db error"))
 			},
 			expectedFunc: func(t *testing.T, project *response.ProjectDto, err error) {
@@ -58,6 +60,23 @@ func TestProjectService_CreateProject(t *testing.T) {
 				apiErr, ok := err.(*core.ApiError)
 				assert.True(t, ok)
 				assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+			},
+		},
+		{
+			name:   "Subdomain already exists",
+			userID: 1,
+			request: &request.CreateProjectRequest{
+				Name:      "Test Project",
+				Subdomain: "test-project",
+			},
+			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, minioMock *minio.Mock) {
+				repo.On("FindBySubdomain", mock.Anything, "test-project").Return(&models.Project{}, nil)
+			},
+			expectedFunc: func(t *testing.T, project *response.ProjectDto, err error) {
+				assert.Error(t, err)
+				apiErr, ok := err.(*core.ApiError)
+				assert.True(t, ok)
+				assert.Equal(t, http.StatusBadRequest, apiErr.Code)
 			},
 		},
 	}

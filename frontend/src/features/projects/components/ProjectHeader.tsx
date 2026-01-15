@@ -92,7 +92,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         </Dialog>
 
         <Button className="h-10 px-5 rounded-lg bg-primary text-primary-foreground font-extrabold text-sm shadow-neon-brand hover:bg-primary/90 transition-all flex items-center gap-2 hover:scale-[1.02]" asChild>
-          <Link href={`https://${project.url}`} target="_blank">
+          <Link href={`${project.url}`} target="_blank">
             Visit Site
             <ArrowUpRight className="w-4 h-4" />
           </Link>

@@ -52,3 +52,8 @@ func (m *DeploymentRepositoryMock) WithTx(tx *gorm.DB) IDeploymentRepository {
 	args := m.Called(tx)
 	return args.Get(0).(IDeploymentRepository)
 }
+
+func (m *DeploymentRepositoryMock) Delete(ctx context.Context, deployment *models.Deployment) error {
+	args := m.Called(ctx, deployment)
+	return args.Error(0)
+}

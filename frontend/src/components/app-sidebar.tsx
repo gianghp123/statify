@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react"; // Added for modal state
 import {
   Sidebar,
   SidebarContent,
@@ -13,26 +12,18 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  Bolt,
   ChevronDown,
   LayoutDashboard,
+  LogOut,
   Rocket,
   Settings,
-  User,
-  LogOut,
+  User
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react"; // Added for modal state
 
 // --- Shadcn UI Imports ---
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,10 +34,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { ThemeToggle } from "@/components/theme-toggle";
-import { UserDto } from "@/features/users/dtos/response/user.response.dto";
 import { logout } from "@/features/auth/services/auth.actions";
+import { UserDto } from "@/features/users/dtos/response/user.response.dto";
 import { Logo } from "./logo";
 
 const items = [

@@ -29,6 +29,10 @@ func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploy
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *request.CreateProjectRequest) (*response.ProjectDto, error) {
+	if _, err := s.repo.FindBySubdomain(ctx, req.Subdomain); err == nil {
+		return nil, core.BadRequestError("Subdomain already exists, please choose another one.")
+	}
+
 	project := &models.Project{
 		Name:      req.Name,
 		Subdomain: req.Subdomain,

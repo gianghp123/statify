@@ -148,14 +148,26 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
 }
 
 func (c *DeploymentController) DeleteDeployment(ctx *gin.Context) {
-	// userID, err := utils.GetUserIDFromContext(ctx)
-	// if err != nil {
-	// 	core.HandleApiError(ctx, core.UnauthorizedError())
-	// 	return
-	// }
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
 
-	// TODO: Implement actual delete logic with service
-	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Deployment deleted successfully (placeholder)", nil))
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid deployment ID"))
+		return
+	}
+
+	err = c.service.DeleteDeployment(ctx, uint(id), userID)
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Deployment deleted successfully", nil))
 }
 
 func (c *DeploymentController) TurnDeploymentLive(ctx *gin.Context) {
