@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const data = [
   { name: "Mon", visitors: 4000, bandwidth: 2400 },
@@ -20,14 +20,14 @@ export function AnalyticsCharts() {
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ccff00" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ccff00" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#ccff00" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ccff00" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a1b3d" vertical={false} />
               <XAxis dataKey="name" stroke="#aba3bf" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#aba3bf" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: '#180f26', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                 itemStyle={{ color: '#ccff00' }}
               />
@@ -44,14 +44,14 @@ export function AnalyticsCharts() {
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="colorBandwidth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a1b3d" vertical={false} />
               <XAxis dataKey="name" stroke="#aba3bf" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#aba3bf" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: '#180f26', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                 itemStyle={{ color: '#a78bfa' }}
               />

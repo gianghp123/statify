@@ -26,7 +26,7 @@ export function ContentTable() {
               <th className="px-6 py-3 font-semibold tracking-wider" scope="col">Bounce Rate</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-white/[0.02]">
+          <tbody className="divide-y divide-border bg-white/2">
             {topContent.map((row) => (
               <tr key={row.path} className="hover:bg-primary/5 transition-colors group">
                 <td className="px-6 py-4 font-medium text-foreground group-hover:text-primary transition-colors">{row.path}</td>

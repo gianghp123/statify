@@ -1,0 +1,13 @@
+http://statify.online {
+  reverse_proxy host.docker.internal:3000 
+}
+
+http://api.statify.online {
+  reverse_proxy host.docker.internal:8000
+}
+
+http://*.statify.online {
+  rewrite * /api/v1/serve-files{uri}
+  reverse_proxy host.docker.internal:8000
+}
+  

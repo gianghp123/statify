@@ -4,11 +4,8 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"mime"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -169,99 +166,34 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, p
 	uniqueSuffix := time.Now().UnixNano()
 	outputPrefix := fmt.Sprintf("deployments/%d/%s-%d", projectID, timestamp, uniqueSuffix)
 
-	var uploadedObjects []string // Track files for rollback
+	objectName := fmt.Sprintf("%s/temp", outputPrefix)
 
-	log.Printf("Starting upload to %s", outputPrefix)
-
-	for _, file := range zipReader.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-
-		// Upload file
-		err := s.uploadFileToMinio(ctx, outputPrefix, file)
-		if err != nil {
-			// MINIO FAILURE: Trigger Rollback
-			log.Printf("Upload failed for %s: %v. Rolling back...", file.Name, err)
-			s.rollbackMinioUploads(ctx, uploadedObjects)
-			return nil, core.InternalError("Failed to upload files: " + err.Error())
-		}
-
-		// Track successful upload (construct the full key)
-		fullKey := fmt.Sprintf("%s/%s", outputPrefix, file.Name)
-		uploadedObjects = append(uploadedObjects, fullKey)
+	_, err = s.minioClient.StatObject(ctx, "static-sites", objectName, minioGo.StatObjectOptions{})
+	if err == nil {
+		return nil, core.BadRequestError("Deployment already exists")
 	}
 
-	// 4. Create Database Record (The "Commit" Point)
+	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, multipartFile, req.File.Size, minioGo.PutObjectOptions{
+		ContentType: "application/zip",
+	})
+
+	if err != nil {
+		return nil, core.InternalError()
+	}
+
 	deployment := &models.Deployment{
 		ProjectID:    projectID,
-		Status:       enums.DeploymentStatusReady,
+		Status:       enums.DeploymentStatusQueued,
 		OutputPrefix: outputPrefix,
 	}
 
-	// Attempt to save to DB
-	if err := s.repo.Create(ctx, deployment); err != nil {
-		// DB FAILURE: Trigger Rollback
-		// The files are in MinIO, but the DB failed. We must delete the files to avoid "ghost" storage.
-		log.Printf("Database creation failed. Rolling back MinIO storage...")
-		s.rollbackMinioUploads(ctx, uploadedObjects)
-		return nil, core.ParseDatabaseError(err)
+	err = s.repo.Create(ctx, deployment)
+	if err != nil {
+		return nil, core.InternalError()
 	}
 
 	log.Printf("Deployment %d created successfully", deployment.ID)
 	return utils.EntityToDto[*response.DeploymentDto](deployment)
-}
-
-func (s *DeploymentService) uploadFileToMinio(ctx context.Context, prefix string, zf *zip.File) error {
-	rc, err := zf.Open()
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
-
-	// Detect Content-Type
-	contentType := mime.TypeByExtension(filepath.Ext(zf.Name))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	// Use LimitReader to enforce the uncompressed size validated earlier
-	// This prevents the file from reading more bytes than the header claimed
-	limitReader := io.LimitReader(rc, int64(zf.UncompressedSize64))
-
-	objectName := fmt.Sprintf("%s/%s", prefix, zf.Name)
-
-	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, limitReader, int64(zf.UncompressedSize64), minioGo.PutObjectOptions{
-		ContentType: contentType,
-	})
-
-	return err
-}
-
-// ---------------------------------------------------------
-// Helper: Rollback (Compensating Transaction)
-// ---------------------------------------------------------
-func (s *DeploymentService) rollbackMinioUploads(ctx context.Context, objects []string) {
-	// Execute deletion in a background goroutine or immediately.
-	// For critical consistency, doing it immediately is safer, though it adds latency to the error response.
-
-	// Create a channel for objects to delete (MinIO optimized batch deletion)
-	objectsCh := make(chan minioGo.ObjectInfo)
-
-	go func() {
-		defer close(objectsCh)
-		for _, objName := range objects {
-			objectsCh <- minioGo.ObjectInfo{Key: objName}
-		}
-	}()
-
-	// Call RemoveObjects API
-	errorCh := s.minioClient.RemoveObjects(ctx, "static-sites", objectsCh, minioGo.RemoveObjectsOptions{})
-
-	// Log any errors during rollback
-	for err := range errorCh {
-		log.Printf("CRITICAL: Failed to delete object during rollback: %s, Error: %v", err.ObjectName, err.Err)
-	}
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {

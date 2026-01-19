@@ -18,4 +18,7 @@ type IDeploymentRepository interface {
 	Delete(ctx context.Context, deployment *models.Deployment) error
 	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) IDeploymentRepository
+	ClaimNextQueued(ctx context.Context) (*models.Deployment, error)
+	MarkFailed(ctx context.Context, id uint, error string) error
+	MarkReady(ctx context.Context, id uint) error
 }

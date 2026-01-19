@@ -57,3 +57,18 @@ func (m *DeploymentRepositoryMock) Delete(ctx context.Context, deployment *model
 	args := m.Called(ctx, deployment)
 	return args.Error(0)
 }
+
+func (m *DeploymentRepositoryMock) ClaimNextQueued(ctx context.Context) (*models.Deployment, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*models.Deployment), args.Error(1)
+}
+
+func (m *DeploymentRepositoryMock) MarkFailed(ctx context.Context, id uint, error string) error {
+	args := m.Called(ctx, id, error)
+	return args.Error(0)
+}
+
+func (m *DeploymentRepositoryMock) MarkReady(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}

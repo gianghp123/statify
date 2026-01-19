@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"gorm.io/gorm"
@@ -102,4 +103,79 @@ func (r *DeploymentRepository) WithTx(tx *gorm.DB) IDeploymentRepository {
 
 func (r *DeploymentRepository) Delete(ctx context.Context, deployment *models.Deployment) error {
 	return r.db.WithContext(ctx).Unscoped().Delete(deployment).Error
+}
+
+func (r *DeploymentRepository) ClaimNextQueued(ctx context.Context) (*models.Deployment, error) {
+	var deployment models.Deployment
+
+	err := r.db.WithContext(ctx).Raw(`
+        UPDATE deployments
+        SET status = ?
+        WHERE id = (
+            SELECT id
+            FROM deployments
+            WHERE status = ?
+            ORDER BY created_at
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+        )
+        RETURNING *;
+    `, enums.DeploymentStatusProcessing, enums.DeploymentStatusQueued).Scan(&deployment).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &deployment, nil
+}
+
+func (r *DeploymentRepository) MarkReady(
+	ctx context.Context,
+	deploymentID uint,
+) error {
+
+	result := r.db.WithContext(ctx).Exec(`
+		UPDATE deployments
+		SET status = ?,
+		    updated_at = now()
+		WHERE id = ?
+		  AND status = ?;
+	`,
+		enums.DeploymentStatusReady,
+		deploymentID,
+		enums.DeploymentStatusProcessing,
+	)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (r *DeploymentRepository) MarkFailed(
+	ctx context.Context,
+	deploymentID uint,
+	reason string,
+) error {
+
+	result := r.db.WithContext(ctx).Exec(`
+		UPDATE deployments
+		SET status = ?,
+		    validation_error = ?,
+		    updated_at = now()
+		WHERE id = ?
+		  AND status = ?;
+	`,
+		enums.DeploymentStatusFailed,
+		reason,
+		deploymentID,
+		enums.DeploymentStatusProcessing,
+	)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }
