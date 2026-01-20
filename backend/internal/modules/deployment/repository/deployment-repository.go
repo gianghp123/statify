@@ -108,7 +108,7 @@ func (r *DeploymentRepository) Delete(ctx context.Context, deployment *models.De
 func (r *DeploymentRepository) ClaimNextQueued(ctx context.Context) (*models.Deployment, error) {
 	var deployment models.Deployment
 
-	err := r.db.WithContext(ctx).Raw(`
+	tx := r.db.WithContext(ctx).Raw(`
         UPDATE deployments
         SET status = ?
         WHERE id = (
@@ -120,10 +120,14 @@ func (r *DeploymentRepository) ClaimNextQueued(ctx context.Context) (*models.Dep
             LIMIT 1
         )
         RETURNING *;
-    `, enums.DeploymentStatusProcessing, enums.DeploymentStatusQueued).Scan(&deployment).Error
+    `, enums.DeploymentStatusProcessing, enums.DeploymentStatusQueued).Scan(&deployment)
 
-	if err != nil {
-		return nil, err
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return &deployment, nil

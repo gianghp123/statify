@@ -132,24 +132,24 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				}
 				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
 
-				// Expect PutObject for each file
-				minioClient.On("PutObject", mock.Anything, "static-sites",
-					mock.MatchedBy(func(s string) bool {
-						return strings.HasPrefix(s, "deployments/1/") && strings.Contains(s, "index.html")
-					}),
-					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minioGo.UploadInfo{}, nil)
+				// Expect StatObject check
+				minioClient.On("StatObject", mock.Anything, "static-sites", mock.MatchedBy(func(s string) bool {
+					return strings.HasPrefix(s, "deployments/1/") && strings.HasSuffix(s, "/temp")
+				}), mock.Anything).Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
 
+				// Expect single PutObject for the zip file
 				minioClient.On("PutObject", mock.Anything, "static-sites",
 					mock.MatchedBy(func(s string) bool {
-						return strings.HasPrefix(s, "deployments/1/") && strings.Contains(s, "css/style.css")
+						return strings.HasPrefix(s, "deployments/1/") && strings.HasSuffix(s, "/temp")
 					}),
-					mock.Anything, mock.Anything, mock.Anything,
+					mock.Anything, mock.Anything, mock.MatchedBy(func(opt minioGo.PutObjectOptions) bool {
+						return opt.ContentType == "application/zip"
+					}),
 				).Return(minioGo.UploadInfo{}, nil)
 
 				// Expect final DB creation
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
-					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusReady && strings.HasPrefix(d.OutputPrefix, "deployments/1/")
+					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusQueued && strings.HasPrefix(d.OutputPrefix, "deployments/1/")
 				})).Return(nil).Run(func(args mock.Arguments) {
 					d := args.Get(1).(*models.Deployment)
 					d.ID = 10
@@ -158,7 +158,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, deployment)
-				assert.Equal(t, string(enums.DeploymentStatusReady), deployment.Status)
+				assert.Equal(t, string(enums.DeploymentStatusQueued), deployment.Status)
 			},
 		},
 		{
@@ -224,27 +224,20 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
 				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
 
-				// First file succeeds
-				minioClient.On("PutObject", mock.Anything, "static-sites",
-					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "index.html") }),
-					mock.Anything, mock.Anything, mock.Anything,
-				).Return(minioGo.UploadInfo{}, nil)
+				// StatObject check succeeds
+				minioClient.On("StatObject", mock.Anything, "static-sites", mock.Anything, mock.Anything).Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
 
-				// Second file fails
+				// File upload fails
 				minioClient.On("PutObject", mock.Anything, "static-sites",
-					mock.MatchedBy(func(s string) bool { return strings.Contains(s, "css/style.css") }),
-					mock.Anything, mock.Anything, mock.Anything,
+					mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 				).Return(minioGo.UploadInfo{}, fmt.Errorf("minio error"))
-
-				// Expect RemoveObjects for rollback
-				errCh := make(chan minioGo.RemoveObjectError)
-				close(errCh)
-				minioClient.On("RemoveObjects", mock.Anything, "static-sites", mock.Anything, mock.Anything).
-					Return((<-chan minioGo.RemoveObjectError)(errCh))
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "minio error")
+				apiErr, ok := err.(*core.ApiError)
+				assert.True(t, ok)
+				assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+				assert.Equal(t, "Internal Server Error", apiErr.Message)
 			},
 		},
 	}
@@ -461,6 +454,38 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, fileDTO)
+			},
+		},
+		{
+			name:      "SPA Fallback successfully",
+			subdomain: "testing",
+			fileName:  "/some-route",
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
+				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive, OutputPrefix: "deployments/10/50", IsSPA: true}
+
+				projectRepo.On("FindBySubdomain", mock.Anything, "testing").Return(project, nil)
+				repo.On("FindByID", mock.Anything, uint(50)).Return(deployment, nil)
+
+				// Initial call
+				minioClient.On("StatObject", mock.Anything, mock.Anything, "deployments/10/50/some-route", mock.Anything).
+					Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"}).Once()
+
+				// .html fallback
+				minioClient.On("StatObject", mock.Anything, mock.Anything, "deployments/10/50/some-route.html", mock.Anything).
+					Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"}).Once()
+
+				// SPA fallback
+				minioClient.On("StatObject", mock.Anything, mock.Anything, "deployments/10/50/index.html", mock.Anything).
+					Return(minioGo.ObjectInfo{}, nil).Once()
+
+				minioClient.On("GetObject", mock.Anything, mock.Anything, "deployments/10/50/index.html", mock.Anything).
+					Return(&minioGo.Object{}, nil).Once()
+			},
+			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, fileDTO)
+				assert.Equal(t, http.StatusOK, fileDTO.StatusCode)
 			},
 		},
 	}
@@ -721,6 +746,75 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 			repo.AssertExpectations(t)
 			projectRepo.AssertExpectations(t)
 			minioClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeploymentService_ToggleIsSPAMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		userID       uint
+		deploymentID uint
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		expectedFunc func(t *testing.T, err error)
+	}{
+		{
+			name:         "Toggle SPA mode successfully",
+			userID:       1,
+			deploymentID: 10,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				deployment := &models.Deployment{
+					Model:     gorm.Model{ID: 10},
+					ProjectID: 1,
+					IsSPA:     false,
+				}
+				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
+
+				project := &models.Project{
+					Model:  gorm.Model{ID: 1},
+					UserID: 1,
+				}
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
+					return d.ID == 10 && d.IsSPA == true
+				})).Return(nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:         "Toggle SPA mode failure - forbidden user",
+			userID:       2,
+			deploymentID: 10,
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+				deployment := &models.Deployment{
+					Model:     gorm.Model{ID: 10},
+					ProjectID: 1,
+				}
+				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
+
+				project := &models.Project{
+					Model:  gorm.Model{ID: 1},
+					UserID: 1,
+				}
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+			},
+			expectedFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(repository.DeploymentRepositoryMock)
+			projectRepo := new(projectRepository.ProjectRepositoryMock)
+			tt.setupMocks(repo, projectRepo)
+			s := NewDeploymentService(repo, projectRepo, nil)
+			err := s.ToggleIsSPAMode(context.TODO(), tt.deploymentID, tt.userID)
+			tt.expectedFunc(t, err)
 		})
 	}
 }

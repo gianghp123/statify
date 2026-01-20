@@ -23,7 +23,7 @@ export const getStatusBadge = (status: DeploymentStatus) => {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-bold border border-warning/20">
           <span className="w-3 h-3 animate-spin border-2 border-warning border-t-transparent rounded-full" />
-          {status === DeploymentStatus.PROCESSING ? 'PROCESSING' : 'BUILDING'}
+          {status}
         </span>
       );
     case DeploymentStatus.FAILED:
