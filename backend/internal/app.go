@@ -3,6 +3,8 @@ package internal
 import (
 	"log"
 
+	"github.com/gianghp/statify/internal/core/sse"
+	"github.com/gianghp/statify/internal/database"
 	middlewares "github.com/gianghp/statify/internal/middlewares"
 	authModule "github.com/gianghp/statify/internal/modules/auth"
 	authService "github.com/gianghp/statify/internal/modules/auth/service"
@@ -26,7 +28,7 @@ type App struct {
 	Router *gin.Engine
 }
 
-func NewApp(db *gorm.DB, minioClient *minio.Client) *App {
+func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener *database.PostgresNotificationListener) *App {
 	router := gin.New()
 
 	// Add the colorful logger manually
@@ -63,7 +65,7 @@ func NewApp(db *gorm.DB, minioClient *minio.Client) *App {
 	// Controllers
 	authCtrl := authModule.NewAuthController(authSvc)
 	projectCtrl := projectModule.NewProjectController(projectSvc)
-	deploymentCtrl := deploymentModule.NewDeploymentController(deploymentSvc)
+	deploymentCtrl := deploymentModule.NewDeploymentController(deploymentSvc, broker)
 	userCtrl := userModule.NewUserController(userSvc)
 
 	// Modules
@@ -81,6 +83,9 @@ func NewApp(db *gorm.DB, minioClient *minio.Client) *App {
 	projectMod.RegisterRoutes(api, authMiddleware)
 	deploymentMod.RegisterRoutes(api, authMiddleware)
 	userMod.RegisterRoutes(api, authMiddleware)
+
+	// Start the listener in a goroutine
+	go listener.Run(sse.DeploymentStatusEvent)
 
 	return &App{
 		Router: router,

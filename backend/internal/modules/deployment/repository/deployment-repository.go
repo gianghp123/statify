@@ -5,6 +5,7 @@ import (
 
 	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/core/repository"
+	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database/models"
 	"gorm.io/gorm"
 )
@@ -130,6 +131,18 @@ func (r *DeploymentRepository) ClaimNextQueued(ctx context.Context) (*models.Dep
 		return nil, gorm.ErrRecordNotFound
 	}
 
+	if tx.RowsAffected > 0 {
+		tx.Exec(`
+            SELECT pg_notify(?, json_build_object(
+                'id', ?::text,
+                'status', ?::text
+            )::text)`,
+			sse.DeploymentStatusEvent,
+			deployment.ID,
+			enums.DeploymentStatusProcessing,
+		)
+	}
+
 	return &deployment, nil
 }
 
@@ -154,6 +167,22 @@ func (r *DeploymentRepository) MarkReady(
 		return result.Error
 	}
 
+	if result.RowsAffected > 0 {
+		notifyErr := r.db.WithContext(ctx).Exec(`
+            SELECT pg_notify(?, json_build_object(
+                'id', ?::text,
+                'status', ?::text
+            )::text)`,
+			sse.DeploymentStatusEvent,
+			deploymentID,
+			enums.DeploymentStatusReady,
+		).Error
+
+		if notifyErr != nil {
+			return notifyErr
+		}
+	}
+
 	return nil
 }
 
@@ -175,10 +204,29 @@ func (r *DeploymentRepository) MarkFailed(
 		reason,
 		deploymentID,
 		enums.DeploymentStatusProcessing,
+		enums.DeploymentStatusFailed,
 	)
 
 	if result.Error != nil {
 		return result.Error
+	}
+
+	if result.RowsAffected > 0 {
+		notifyErr := r.db.WithContext(ctx).Exec(`
+            SELECT pg_notify(?, json_build_object(
+                'id', ?::text,
+                'status', ?::text,
+                'validation_error', ?::text
+            )::text)`,
+			sse.DeploymentStatusEvent,
+			deploymentID,
+			enums.DeploymentStatusFailed,
+			reason,
+		).Error
+
+		if notifyErr != nil {
+			return notifyErr
+		}
 	}
 
 	return nil

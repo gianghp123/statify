@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api-fetch";
-import { DeploymentDto } from "../dtos/response/deployment.response.dto";
 import { BasePaginatedResponse, BaseResponse } from "@/lib/response/api-response";
+import { DeploymentDto } from "../dtos/response/deployment.response.dto";
 
 export async function getDeployments(projectId: number, page: number = 1, limit: number = 10) {
   return apiFetch<BasePaginatedResponse<DeploymentDto[]>>(`/projects/${projectId}/deployments`, {
@@ -22,3 +22,4 @@ export async function getGlobalDeploymentHistory(page: number = 1, limit: number
     withCredentials: true,
   });
 }
+

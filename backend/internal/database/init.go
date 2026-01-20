@@ -1,15 +1,13 @@
 package database
 
 import (
-	"github.com/gianghp/statify/internal/configs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func InitDatabase() (*gorm.DB, error) {
-	config := configs.LoadDatabaseConfig()
+func InitDatabase(connectStr string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  config,
+		DSN:                  connectStr,
 		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		TranslateError: true,

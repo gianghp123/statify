@@ -1,8 +1,6 @@
 import "server-only";
 import { snakeToCamel } from "./case";
 import { getAuthTokenServer } from "./cookies/cookies-actions";
-import { BasePaginatedResponse, BaseResponse } from "./response/api-response";
-import { redirect } from "next/navigation";
 
 type ApiFetchOptions = {
   baseUrl?: string;

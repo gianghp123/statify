@@ -22,7 +22,9 @@ func main() {
 		log.Println("No .env.local file found, using system environment variables")
 	}
 
-	db, err := database.InitDatabase()
+	connectStr := configs.LoadDatabaseConfig()
+
+	db, err := database.InitDatabase(connectStr)
 
 	if err != nil {
 		log.Fatal("Failed when connecting to the database")

@@ -1,12 +1,14 @@
 package deployment
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gianghp/statify/internal/core"
+	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/utils"
@@ -15,10 +17,11 @@ import (
 
 type DeploymentController struct {
 	service *service.DeploymentService
+	broker  *sse.Broker
 }
 
-func NewDeploymentController(service *service.DeploymentService) *DeploymentController {
-	return &DeploymentController{service: service}
+func NewDeploymentController(service *service.DeploymentService, broker *sse.Broker) *DeploymentController {
+	return &DeploymentController{service: service, broker: broker}
 }
 
 func (c *DeploymentController) GetGlobalDeploymentHistory(ctx *gin.Context) {
@@ -237,4 +240,34 @@ func (c *DeploymentController) ToggleIsSPAMode(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, core.NewApiResponse[any](http.StatusNoContent, "Deployment is SPA mode toggled successfully", nil))
+}
+
+func (c *DeploymentController) StreamDeploymentStatus(ctx *gin.Context) {
+	//Set SSE headers
+	ctx.Header("Content-Type", "text/event-stream")
+	ctx.Header("Cache-Control", "no-cache")
+	ctx.Header("Connection", "keep-alive")
+
+	flusher, ok := ctx.Writer.(http.Flusher)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	clientChan := make(chan string, 10)
+	c.broker.Subscribe(sse.DeploymentStatusEvent, clientChan)
+
+	go func() {
+		<-ctx.Done()
+		c.broker.Unsubscribe(sse.DeploymentStatusEvent, clientChan)
+	}()
+
+	// Stream events
+	for msg := range clientChan {
+		_, err := fmt.Fprintf(ctx.Writer, "data: %s\n\n", msg)
+		if err != nil {
+			return
+		}
+		flusher.Flush()
+	}
 }

@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { DeploymentDto } from "../dtos/response/deployment.response.dto";
 import { deleteDeployment, toggleIsSPAMode, turnDeploymentLive, turnDeploymentOffline } from "../services/deployment.actions";
 import { getStatusBadge } from "../utils/get-status-badge";
+import { streamDeploymentStatus } from "../services/deployment.sse";
+import { DeploymentStatusResponseDto } from "../dtos/response/deployment-status.response.dto";
 
 interface DeploymentHistoryTableProps {
   initialDeployments: DeploymentDto[];
@@ -44,6 +46,33 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
   useEffect(() => {
     setDeployments(initialDeployments);
   }, [initialDeployments]);
+
+  useEffect(() => {
+    const eventSource = streamDeploymentStatus();
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data) as DeploymentStatusResponseDto;
+      const deploymentId = Number(data.id);
+      setDeployments((prev) => {
+        const existingIndex = prev.findIndex((d) => d.id === deploymentId);
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = { ...updated[existingIndex], status: data.status };
+          return updated;
+        }
+        return prev;
+      });
+    };
+
+    eventSource.onerror = (error) => {
+      console.log(error)
+      toast.error("Failed to stream deployment status. Please refresh the page.");
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
 
   const handleDelete = async () => {

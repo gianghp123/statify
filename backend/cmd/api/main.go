@@ -7,6 +7,7 @@ import (
 	"github.com/gianghp/statify/internal"
 	"github.com/gianghp/statify/internal/assets"
 	"github.com/gianghp/statify/internal/configs"
+	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gianghp/statify/internal/database/migrations"
 	"github.com/gin-contrib/cors"
@@ -22,7 +23,9 @@ func main() {
 		log.Println("No .env.local file found, using system environment variables")
 	}
 
-	db, err := database.InitDatabase()
+	connectStr := configs.LoadDatabaseConfig()
+
+	db, err := database.InitDatabase(connectStr)
 
 	if err != nil {
 		log.Fatal("Failed when connecting to the database")
@@ -60,7 +63,11 @@ func main() {
 		return
 	}
 
-	app := internal.NewApp(db, minioClient)
+	broker := sse.NewBroker()
+
+	listener := database.NewPostgresNotificationListener(connectStr, broker)
+
+	app := internal.NewApp(db, minioClient, broker, listener)
 
 	app.Router.Use(cors.Default())
 

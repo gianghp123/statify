@@ -30,5 +30,6 @@ func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gi
 		globalDeployments.GET("", authMiddleware, m.controller.GetGlobalDeploymentHistory)
 		globalDeployments.PUT("/:id/toggle-spa-mode", authMiddleware, m.controller.ToggleIsSPAMode)
 		globalDeployments.DELETE("/:id", authMiddleware, m.controller.DeleteDeployment)
+		globalDeployments.GET("/stream-status", authMiddleware, m.controller.StreamDeploymentStatus)
 	}
 }
