@@ -52,24 +52,28 @@ func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, pa
 		// 1. IF current_deployment_id > 0: Check if the deployment with that ID has the specific status.
 		// 2. OR IF current_deployment_id == 0: Check if the LATEST deployment for this project has the specific status.
 		db = db.Where(`
-			(
-				-- Case A: current_deployment_id is set. Check that specific deployment.
-				(projects.current_deployment_id > 0 AND EXISTS (
-					SELECT 1 FROM deployments d 
-					WHERE d.id = projects.current_deployment_id 
-					AND d.status = ?
-				))
-				OR
-				-- Case B: current_deployment_id is 0 or NULL. Check the latest deployment.
-				((projects.current_deployment_id = 0 OR projects.current_deployment_id IS NULL) AND EXISTS (
-					SELECT 1 FROM deployments d 
-					WHERE d.project_id = projects.id 
-					AND d.status = ?
-					ORDER BY d.created_at DESC 
-					LIMIT 1
-				))
+			? = (
+				CASE 
+					-- PRIORITY 1: If the project is currently running (Pinned ID is set AND its status is LIVE)
+					-- Then the project status is forcefully 'LIVE', regardless of newer commits.
+					WHEN projects.current_deployment_id > 0 AND (
+						SELECT d.status 
+						FROM deployments d 
+						WHERE d.id = projects.current_deployment_id
+					) = 'LIVE' THEN 'LIVE'
+
+					-- PRIORITY 2: Otherwise, the status is determined by the strictly LATEST deployment.
+					-- (e.g., READY, FAILED, BUILDING, or a LIVE deployment that isn't pinned yet)
+					ELSE (
+						SELECT d.status 
+						FROM deployments d 
+						WHERE d.project_id = projects.id 
+						ORDER BY d.created_at DESC 
+						LIMIT 1
+					)
+				END
 			)
-		`, status, status)
+		`, status)
 	}
 
 	// 4. Count

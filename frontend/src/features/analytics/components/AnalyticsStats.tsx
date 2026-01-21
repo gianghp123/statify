@@ -1,34 +1,40 @@
-import { BarChart3, TrendingUp, Users, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { BarChart3, TrendingUp, Users, Clock, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
+import { ProjectOverviewMetricsDTO } from "@/features/analytics/dtos/response/analytic-metrics.dto";
 
-export function AnalyticsStats() {
+
+interface AnalyticsStatsProps {
+  metrics: ProjectOverviewMetricsDTO;
+}
+
+export function AnalyticsStats({ metrics }: AnalyticsStatsProps) {
   const stats = [
     {
-      title: "Total Visitors",
-      value: "48.2k",
-      change: "+12.5%",
+      title: "Total Requests",
+      value: metrics.totalRequests.toLocaleString(),
+      change: "+12.5%", // TODO: Calculate change if previous data available
       increasing: true,
       icon: Users,
     },
     {
       title: "Bandwidth Used",
-      value: "124 GB",
+      value: `${metrics.totalBandwidth.toFixed(2)} MB`,
       change: "+18.2%",
       increasing: true,
       icon: BarChart3,
     },
     {
-      title: "Avg. Build Time",
-      value: "42s",
-      change: "-4s",
-      increasing: true,
+      title: "Avg. Response Time",
+      value: `${metrics.avgResponseMs.toFixed(0)}ms`,
+      change: "-4ms",
+      increasing: false, // lower is better for latency, but typically green means good. Adjust logic if needed.
       icon: Clock,
     },
     {
-      title: "Uptime",
-      value: "99.98%",
+      title: "Error Rate",
+      value: `${metrics.errorRatePercent.toFixed(2)}%`,
       change: "+0.01%",
-      increasing: true,
-      icon: TrendingUp,
+      increasing: false, // lower is better
+      icon: Activity,
     },
   ];
 
@@ -44,10 +50,6 @@ export function AnalyticsStats() {
           </div>
           <div className="flex items-end justify-between">
             <span className="text-2xl font-bold text-foreground">{stat.value}</span>
-            <div className={`flex items-center text-xs font-medium ${stat.increasing ? 'text-primary' : 'text-red-400'}`}>
-              {stat.increasing ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
-              {stat.change}
-            </div>
           </div>
         </div>
       ))}

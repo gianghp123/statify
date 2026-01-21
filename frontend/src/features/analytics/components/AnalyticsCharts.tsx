@@ -1,23 +1,25 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { TimeSeriesPointDTO } from "@/features/analytics/dtos/response/analytic-metrics.dto";
 
-const data = [
-  { name: "Mon", visitors: 4000, bandwidth: 2400 },
-  { name: "Tue", visitors: 3000, bandwidth: 1398 },
-  { name: "Wed", visitors: 2000, bandwidth: 9800 },
-  { name: "Thu", visitors: 2780, bandwidth: 3908 },
-  { name: "Fri", visitors: 1890, bandwidth: 4800 },
-  { name: "Sat", visitors: 2390, bandwidth: 3800 },
-  { name: "Sun", visitors: 3490, bandwidth: 4300 },
-];
 
-export function AnalyticsCharts() {
+interface AnalyticsChartsProps {
+  data: TimeSeriesPointDTO[];
+}
+
+export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
+  const chartData = data.map(point => ({
+    name: new Date(point.timestamp).toLocaleDateString(),
+    visitors: point.requests,
+    bandwidth: point.bandwidth.toFixed(5),
+  }));
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
         <h3 className="text-foreground font-semibold mb-6">Visitor Traffic</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ccff00" stopOpacity={0.3} />
@@ -38,10 +40,10 @@ export function AnalyticsCharts() {
       </div>
 
       <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
-        <h3 className="text-foreground font-semibold mb-6">Bandwidth Consumption (GB)</h3>
+        <h3 className="text-foreground font-semibold mb-6">Bandwidth Consumption (MB)</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorBandwidth" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.3} />

@@ -1,4 +1,4 @@
-import { ArrowRight, Bolt, Copy, ExternalLink, Globe, Info } from "lucide-react";
+import { ArrowRight, Bolt, Globe, Info, Upload, Layout, PieChart } from "lucide-react";
 import Link from "next/link";
 
 export default function DocsPage() {
@@ -18,7 +18,7 @@ export default function DocsPage() {
             Introduction
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-            Welcome to the Statify documentation. Statify is the fastest way to deploy your static websites, providing a global edge network, automatic CI/CD, and deep analytics built-in.
+            Welcome to the Statify documentation. Statify is the fastest way to deploy your static websites, providing a global edge network and deep analytics built-in.
           </p>
 
           <div className="p-6 bg-primary/5 border border-primary/20 rounded-xl mb-8 flex gap-4 not-prose">
@@ -26,7 +26,7 @@ export default function DocsPage() {
             <div>
               <p className="text-sm text-primary font-medium m-0">Statify is currently in Public Beta.</p>
               <p className="text-sm text-muted-foreground mt-1 m-0">
-                Some features are still being refined. Join our Discord to share your feedback or report bugs.
+                We are currently focusing on UI-based deployments. Git integration and CLI tools are coming soon.
               </p>
             </div>
           </div>
@@ -43,52 +43,105 @@ export default function DocsPage() {
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-4">
                 <Bolt className="w-6 h-6" />
               </div>
-              <h4 className="text-lg font-bold m-0">Blazing Fast Deploys</h4>
+              <h4 className="text-lg font-bold m-0">Zero Config Deploys</h4>
               <p className="text-sm text-muted-foreground mt-2">
-                Deploy in seconds with our optimized build pipeline and global delivery network.
+                Deploy in seconds by simply uploading your build folder as a zip file.
               </p>
             </li>
             <li className="bg-card p-6 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-4">
                 <Globe className="w-6 h-6" />
               </div>
-              <h4 className="text-lg font-bold m-0">Edge First</h4>
+              <h4 className="text-lg font-bold m-0">Global Edge Network</h4>
               <p className="text-sm text-muted-foreground mt-2">
-                Your content is replicated across 300+ edge locations for sub-50ms latency globally.
+                Your content is served from our worldwide edge network for minimal latency.
               </p>
             </li>
           </ul>
 
-          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="installation">
-            Installation
+          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="project-creation">
+            Project Creation
           </h2>
           <p className="text-muted-foreground">
-            Start by installing the Statify CLI globally on your machine. This tool allows you to deploy projects, manage environment variables, and more.
+            To start deploying, you first need to create a project. A project acts as a container for your deployments and configuration.
           </p>
-
-          <div className="relative group mt-6 not-prose">
-            <div className="absolute -top-3 left-4 bg-foreground text-background text-[10px] px-2 py-1 rounded font-mono uppercase tracking-widest z-10 font-bold">
-              Terminal
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 not-prose">
+            <div className="p-4 bg-muted/30 rounded-lg border">
+              <Layout className="w-5 h-5 mb-2 text-primary" />
+              <h4 className="font-bold text-sm">1. Name Your Project</h4>
+              <p className="text-xs text-muted-foreground mt-1">Choose a descriptive name for your site.</p>
             </div>
-            <div className="bg-slate-950 dark:bg-black rounded-xl p-5 overflow-x-auto border border-slate-800 shadow-2xl">
-              <pre className="flex items-center gap-4 m-0">
-                <span className="text-slate-500 select-none">$</span>
-                <code className="text-primary font-mono text-sm">npm install -g statify-cli</code>
-              </pre>
+            <div className="p-4 bg-muted/30 rounded-lg border">
+              <Globe className="w-5 h-5 mb-2 text-primary" />
+              <h4 className="font-bold text-sm">2. Pick a Subdomain</h4>
+              <p className="text-xs text-muted-foreground mt-1">Your site will be live at `name.statify.app`.</p>
             </div>
-            <button className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors" title="Copy code">
-              <Copy className="w-4 h-4" />
-            </button>
+            <div className="p-4 bg-muted/30 rounded-lg border">
+              <Upload className="w-5 h-5 mb-2 text-primary" />
+              <h4 className="font-bold text-sm">3. Upload Assets</h4>
+              <p className="text-xs text-muted-foreground mt-1">Select your production build folder.</p>
+            </div>
           </div>
 
+          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="deployment">
+            Deploying via UI
+          </h2>
+          <p className="text-muted-foreground">
+            Statify supports manual deployments via the web interface. This is the recommended way for static sites and small applications.
+          </p>
+          <div className="bg-card p-6 rounded-xl border mt-6 not-prose">
+            <h4 className="font-bold mb-3 flex items-center gap-2">
+              <Info className="w-4 h-4 text-primary" />
+              How to deploy:
+            </h4>
+            <ol className="space-y-4 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0">1</span>
+                <span>Run your build script (e.g., `npm run build` or `vite build`) to generate your static files.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0">2</span>
+                <span>Compress the contents of your build output folder (usually `dist`, `build`, or `out`) into a **.zip** file.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0">3</span>
+                <span>Navigate to your project dashboard and click **"Deploy New Version"**.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0">4</span>
+                <span>Drag and drop your zip file and wait for the upload to complete.</span>
+              </li>
+            </ol>
+          </div>
+
+          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="analytics">
+            Real-time Analytics
+          </h2>
+          <p className="text-muted-foreground">
+            Monitor your site's performance with built-in analytics. No tracking scripts required—we analyze traffic at the edge.
+          </p>
+          <div className="mt-6 flex items-center gap-4 p-4 bg-primary/5 border border-primary/20 rounded-xl not-prose">
+            <PieChart className="w-8 h-8 text-primary" />
+            <p className="text-sm text-muted-foreground m-0">
+              View request counts, bandwidth usage, and latency distribution directly in your dashboard.
+            </p>
+          </div>
+
+          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="settings">
+            Project Settings
+          </h2>
+          <p className="text-muted-foreground">
+            Customize your project configuration, manage domain settings, and configure SPA mode in the settings tab.
+          </p>
+
           <div className="mt-12 p-8 bg-linear-to-br from-primary/5 to-transparent border border-primary/20 rounded-2xl not-prose">
-            <h3 className="text-xl font-bold mb-2">Ready to deploy?</h3>
-            <p className="text-muted-foreground mb-6">Our quickstart guide will get you live in under 2 minutes.</p>
+            <h3 className="text-xl font-bold mb-2">Ready to go live?</h3>
+            <p className="text-muted-foreground mb-6">Create your first project and join the future of static deployment.</p>
             <Link
-              href="/documentation#quickstart"
+              href="/dashboard"
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-all shadow-lg shadow-primary/20"
             >
-              Get Started
+              Go to Dashboard
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -105,32 +158,21 @@ export default function DocsPage() {
             </Link>
           </li>
           <li>
-            <Link href="#" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Core Principles
+            <Link href="#project-creation" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
+              Project Creation
             </Link>
           </li>
           <li>
-            <Link href="#installation" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Installation
+            <Link href="#deployment" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
+              Deployment via UI
             </Link>
           </li>
           <li>
-            <Link href="#" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Next Steps
+            <Link href="#analytics" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
+              Real-time Analytics
             </Link>
           </li>
         </ul>
-
-        <div className="mt-8 p-4 bg-muted/50 rounded-xl border">
-          <p className="text-xs font-semibold mb-2 uppercase">Need help?</p>
-          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-            Can't find what you're looking for? Reach out to our engineering team.
-          </p>
-          <Link href="#" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-            Contact Support
-            <ExternalLink className="w-3 h-3" />
-          </Link>
-        </div>
       </aside>
     </>
   );

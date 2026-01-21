@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/services/auth.actions";
 import { getCurrentUser } from "@/features/auth/services/auth.get";
 import { ProjectList } from "@/features/projects/components/ProjectList";
-import { StatCards } from "@/features/projects/components/StatCards";
 import { getProjects } from "@/features/projects/services/project.get";
 import { DeploymentStatus } from "@/lib/enums/deployment-status.enum";
 import { Plus } from "lucide-react";
@@ -45,7 +44,6 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <StatCards projects={projects} />
 
       <div className="flex flex-wrap items-center gap-3 pb-2 border-b border-border">
         <Button asChild className="bg-white/10 text-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-colors border border-white/5">

@@ -457,6 +457,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
+  /projects/{project_id}/stream-analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Stream analytics events (SSE)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: start_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: SSE stream of analytics metrics
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/ComprehensiveMetrics"
+
+  /projects/{project_id}/analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Get comprehensive analytics metrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: start_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Comprehensive metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   /serve-files/{file_name}:
     get:
       tags:
@@ -475,6 +541,7 @@ paths:
           description: Not modified
         "404":
           description: File not found
+
   /users/{id}:
     get:
       tags:
@@ -622,6 +689,47 @@ components:
           type: string
         email:
           type: string
+    ComprehensiveMetrics:
+      type: object
+      properties:
+        performance_metrics:
+          $ref: "#/components/schemas/PerformanceMetrics"
+        project_overview_metrics:
+          $ref: "#/components/schemas/ProjectOverviewMetrics"
+        time_series_points:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+    PerformanceMetrics:
+      type: object
+      properties:
+        avg_response_ms:
+          type: number
+    ProjectOverviewMetrics:
+      type: object
+      properties:
+        total_requests:
+          type: integer
+          format: int64
+        total_bandwidth:
+          type: integer
+          format: int64
+        avg_response_ms:
+          type: number
+        error_rate_percent:
+          type: number
+    TimeSeriesPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        requests:
+          type: integer
+          format: int64
+        bandwidth:
+          type: integer
+          format: int64
     Pagination:
       type: object
       properties:

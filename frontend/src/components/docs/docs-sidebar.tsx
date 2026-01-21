@@ -7,34 +7,21 @@ const sidebarItems = [
     title: "Getting Started",
     items: [
       { title: "Introduction", href: "/documentation" },
-      { title: "Quickstart Guide", href: "#" },
-      { title: "Architecture", href: "#" },
+      { title: "Project Creation", href: "/documentation#project-creation" },
+      { title: "Deploying via UI", href: "/documentation#deployment" },
     ],
   },
   {
-    title: "Frameworks",
+    title: "Management",
     items: [
-      { title: "React & Next.js", href: "#" },
-      { title: "Vue & Nuxt", href: "#" },
-      { title: "Astro", href: "#" },
-      { title: "SvelteKit", href: "#" },
+      { title: "Analytics", href: "/documentation#analytics" },
+      { title: "Project Settings", href: "/documentation#settings" },
     ],
   },
   {
-    title: "Deployments",
+    title: "Resources",
     items: [
-      { title: "Git Integration", href: "#" },
-      { title: "Command Line Interface", href: "#" },
-      { title: "Preview Deployments", href: "#" },
-      { title: "Environment Variables", href: "#" },
-    ],
-  },
-  {
-    title: "Edge Platform",
-    items: [
-      { title: "Global Edge Network", href: "#" },
-      { title: "Edge Functions", href: "#" },
-      { title: "Edge Middleware", href: "#" },
+      { title: "API Reference", href: "/documentation/api-reference" },
     ],
   },
 ];

@@ -6,6 +6,8 @@ import { DeploymentHistoryTable } from "@/features/deployments/components/Deploy
 import { getProjectById } from "@/features/projects/services/project.get";
 import { getDeployments } from "@/features/deployments/services/deployment.get";
 import { notFound } from "next/navigation";
+import { BreadScrum } from "@/components/bread-scrum";
+
 
 interface ProjectDetailsPageProps {
   params: Promise<{ projectId: string }>;
@@ -35,20 +37,14 @@ export default async function ProjectDetailsPage({ params, searchParams }: Proje
   const deployments = deploymentsRes.success ? deploymentsRes.data || [] : [];
   const pagination = deploymentsRes.success ? deploymentsRes.pagination || { totalCount: 0, page: 1, limit: 10 } : { totalCount: 0, page: 1, limit: 10 };
 
+  const projectBreadcrumbItems = [
+    { name: "Projects", href: "/dashboard" },
+    { name: project.name, href: `/projects/${projectId}`, isCurrent: true },
+  ]
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-sm mb-6 border-b border-border pb-4">
-        <Link
-          href="/dashboard"
-          className="text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 font-bold"
-        >
-          <Folder className="w-4 h-4" />
-          Projects
-        </Link>
-        <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
-        <span className="text-foreground font-black px-2 py-0.5 bg-muted/50 rounded border border-border/50">{project.name}</span>
-      </nav>
+      <BreadScrum items={projectBreadcrumbItems} />
 
       <ProjectHeader project={project} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

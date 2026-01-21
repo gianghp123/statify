@@ -7,8 +7,10 @@ import (
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database"
 	middlewares "github.com/gianghp/statify/internal/middlewares"
+	analyticsModule "github.com/gianghp/statify/internal/modules/analytics"
 	"github.com/gianghp/statify/internal/modules/analytics/metrics"
 	metricRepo "github.com/gianghp/statify/internal/modules/analytics/repository"
+	analyticsService "github.com/gianghp/statify/internal/modules/analytics/service"
 	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
 	authModule "github.com/gianghp/statify/internal/modules/auth"
 	authService "github.com/gianghp/statify/internal/modules/auth/service"
@@ -71,18 +73,21 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper)
 	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClientWrapper)
 	userSvc := userService.NewUserService(userRepo)
+	analyticsSvc := analyticsService.NewAnalyticsService(metricsRepo)
 
 	// Controllers
 	authCtrl := authModule.NewAuthController(authSvc)
 	projectCtrl := projectModule.NewProjectController(projectSvc)
 	deploymentCtrl := deploymentModule.NewDeploymentController(deploymentSvc, broker)
 	userCtrl := userModule.NewUserController(userSvc)
+	analyticsCtrl := analyticsModule.NewAnalyticsController(broker, analyticsSvc)
 
 	// Modules
 	authMod := authModule.NewAuthModule(authCtrl)
 	projectMod := projectModule.NewProjectModule(projectCtrl)
 	deploymentMod := deploymentModule.NewDeploymentModule(deploymentCtrl)
 	userMod := userModule.NewUserModule(userCtrl)
+	analyticsMod := analyticsModule.NewAnalyticsModule(analyticsCtrl)
 
 	//Middlewares
 	authMiddleware := middlewares.AuthMiddleware(jwtService)
@@ -93,9 +98,11 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	projectMod.RegisterRoutes(api, authMiddleware)
 	deploymentMod.RegisterRoutes(api, authMiddleware, analyzerWrapper)
 	userMod.RegisterRoutes(api, authMiddleware)
+	analyticsMod.RegisterRoutes(api, authMiddleware)
 
 	// Start the listener in a goroutine
 	go listener.Run(sse.DeploymentStatusEvent)
+	go listener.Run(sse.AnalyticsEvent)
 
 	return &App{
 		Router: router,
