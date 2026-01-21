@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,8 +15,8 @@ func NewDeploymentModule(controller *DeploymentController) *DeploymentModule {
 	}
 }
 
-func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
-	rg.GET("/serve-files/*file_name", m.controller.ServeFiles)
+func (m *DeploymentModule) RegisterRoutes(rg *gin.RouterGroup, authMiddleware gin.HandlerFunc, analyzerWrapper *wrapper.AnalyzerWrapper) {
+	rg.GET("/serve-files/*file_name", analyzerWrapper.Wrap(m.controller.ServeFiles))
 	deployments := rg.Group("/projects/:project_id/deployments")
 	{
 		deployments.GET("", authMiddleware, m.controller.GetHistory)

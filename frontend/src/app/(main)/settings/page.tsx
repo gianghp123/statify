@@ -6,9 +6,8 @@ export default function SettingsPage() {
     { title: "General", icon: SettingsIcon, description: "Manage your project settings and configuration.", href: "/settings/general" },
     { title: "Account", icon: User, description: "Update your personal information and preferences.", href: "/settings/account" },
     { title: "Security", icon: Shield, description: "Configure two-factor authentication and passwords.", href: "/settings/security" },
-    { title: "Billing", icon: CreditCard, description: "Manage your subscription, invoices, and payments.", href: "/settings/billing" },
-    { title: "Notifications", icon: Bell, description: "Control how you receive updates and alerts.", href: "/settings/notifications" },
-    { title: "Domains", icon: Globe, description: "Configure custom domains and SSL certificates.", href: "/settings/domains" },
+    // { title: "Notifications", icon: Bell, description: "Control how you receive updates and alerts.", href: "/settings/notifications" },
+    // { title: "Domains", icon: Globe, description: "Configure custom domains and SSL certificates.", href: "/settings/domains" },
   ];
 
   return (

@@ -40,10 +40,10 @@ export default async function MainLayout({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-muted-foreground hover:text-foreground transition-colors relative p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border/30">
+              {/* <button className="text-muted-foreground hover:text-foreground transition-colors relative p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border/30">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background animate-pulse"></span>
-              </button>
+              </button> */}
               <a
                 className="text-sm font-bold text-primary hover:text-primary/80 transition-all drop-shadow-[0_0_8px_var(--neon-brand-glow)]"
                 href="#"

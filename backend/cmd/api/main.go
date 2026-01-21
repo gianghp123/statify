@@ -10,6 +10,7 @@ import (
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gianghp/statify/internal/database/migrations"
+	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -53,7 +54,7 @@ func main() {
 	useSSL := false
 
 	// Initialize minio client object.
-	minioClient, err := minio.New("localhost:9000", &minio.Options{
+	minioClient, err := minio.New(utils.GetEnv("MINIO_URL", "localhost:9000"), &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
 	})

@@ -1,11 +1,15 @@
 package internal
 
 import (
+	"context"
 	"log"
 
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database"
 	middlewares "github.com/gianghp/statify/internal/middlewares"
+	"github.com/gianghp/statify/internal/modules/analytics/metrics"
+	metricRepo "github.com/gianghp/statify/internal/modules/analytics/repository"
+	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
 	authModule "github.com/gianghp/statify/internal/modules/auth"
 	authService "github.com/gianghp/statify/internal/modules/auth/service"
 	deploymentModule "github.com/gianghp/statify/internal/modules/deployment"
@@ -56,6 +60,12 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 		log.Fatal(err)
 	}
 
+	//Metric collector
+	metricsRepo := metricRepo.NewDeploymentMetricsMinuteRepository(db)
+	metricCollector := metrics.NewMetricCollector(metricsRepo)
+	metricCollector.Start(context.Background())
+	analyzerWrapper := wrapper.NewAnalyzerWrapper(metricCollector)
+
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
 	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper)
@@ -81,7 +91,7 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	// Register Routes
 	authMod.RegisterRoutes(api, authMiddleware)
 	projectMod.RegisterRoutes(api, authMiddleware)
-	deploymentMod.RegisterRoutes(api, authMiddleware)
+	deploymentMod.RegisterRoutes(api, authMiddleware, analyzerWrapper)
 	userMod.RegisterRoutes(api, authMiddleware)
 
 	// Start the listener in a goroutine

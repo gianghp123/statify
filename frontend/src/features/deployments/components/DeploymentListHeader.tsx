@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
+import Link from "next/link";
 
 export function DeploymentListHeader() {
   return (
@@ -10,10 +11,12 @@ export function DeploymentListHeader() {
           <h1 className="text-foreground text-3xl md:text-4xl font-black tracking-tight">Deployments</h1>
           <p className="text-muted-foreground text-base">Global view of your static site build history and status.</p>
         </div>
-        <Button className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-black px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg shadow-primary/25">
-          <Plus className="w-5 h-5" />
-          New Deployment
-        </Button>
+        <Link href="/projects/new">
+          <Button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-bold text-sm shadow-neon-primary hover:shadow-neon hover:-translate-y-0.5 transition-all">
+            <Plus className="w-5 h-5" />
+            Create New Project
+          </Button>
+        </Link>
       </div>
 
       <div className="flex flex-col gap-4">

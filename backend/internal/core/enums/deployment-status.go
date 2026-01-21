@@ -11,7 +11,6 @@ const (
 	DeploymentStatusQueued     DeploymentStatus = "QUEUED"
 	DeploymentStatusFailed     DeploymentStatus = "FAILED"
 	DeploymentStatusReady      DeploymentStatus = "READY"
-	DeploymentStatusDeleted    DeploymentStatus = "DELETED"
 	DeploymentStatusProcessing DeploymentStatus = "PROCESSING"
 	DeploymentStatusLive       DeploymentStatus = "LIVE"
 )

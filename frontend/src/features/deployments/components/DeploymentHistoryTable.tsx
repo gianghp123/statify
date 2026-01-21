@@ -279,10 +279,18 @@ export function DeploymentHistoryTable({ initialDeployments, projectId, paginati
             Showing {pagination.totalCount} deployments
           </span>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent" disabled>
+            <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent"
+              disabled={pagination.page === 1}
+              onClick={() => {
+                router.push(`/projects/${projectId}?page=${pagination.page - 1}`);
+              }}>
               <span className="text-xs font-bold">Prev</span>
             </button>
-            <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent" disabled>
+            <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent"
+              disabled={pagination.page === Math.ceil(pagination.totalCount / pagination.limit)}
+              onClick={() => {
+                router.push(`/projects/${projectId}?page=${pagination.page + 1}`);
+              }}>
               <span className="text-xs font-bold">Next</span>
             </button>
           </div>

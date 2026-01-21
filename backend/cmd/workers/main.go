@@ -12,6 +12,7 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/modules/deployment/workers"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
+	"github.com/gianghp/statify/internal/utils"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -37,7 +38,7 @@ func main() {
 	useSSL := false
 
 	// Initialize minio client object.
-	minioClient, err := minio.New("localhost:9000", &minio.Options{
+	minioClient, err := minio.New(utils.GetEnv("MINIO_URL", "localhost:9000"), &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
 	})

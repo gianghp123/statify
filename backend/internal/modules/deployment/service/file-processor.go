@@ -115,10 +115,8 @@ func (s *FileProcessor) rollbackMinioUploads(ctx context.Context, bucketName str
 		}
 	}()
 
-	// Call RemoveObjects API
 	errorCh := s.minioClient.RemoveObjects(ctx, bucketName, objectsCh, minioGo.RemoveObjectsOptions{})
 
-	// Log any errors during rollback
 	for err := range errorCh {
 		log.Printf("CRITICAL: Failed to delete object during rollback: %s, Error: %v", err.ObjectName, err.Err)
 	}

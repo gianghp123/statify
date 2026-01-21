@@ -7,7 +7,6 @@ ifneq (,$(wildcard $(ENV_FILE)))
 endif
 
 # 2. Build the Goose DSN using your specific variables
-# Note: Using $(POSTGRES_DB) ensures it hits 'statify' instead of the default 'postgres'
 DB_URL="postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable"
 MIG_DIR=internal/database/migrations
 

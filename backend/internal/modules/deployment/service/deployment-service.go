@@ -228,14 +228,14 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 			// Clean URL (e.g. /about -> about.html)
 			tryPath := objectPath + ".html"
 			if statH, errH := s.minioClient.StatObject(ctx, bucket, tryPath, minioGo.StatObjectOptions{}); errH == nil {
-				return s.serveS3Object(ctx, bucket, tryPath, statH, http.StatusOK, clientETag)
+				return s.serveS3Object(ctx, deployment.ProjectID, deployment.ID, bucket, tryPath, statH, http.StatusOK, clientETag)
 			}
 
 			// Try Folder Index (e.g. contact/ -> contact/index.html)
 			if strings.HasSuffix(cleanFileName, "/") {
 				tryPath = strings.TrimSuffix(objectPath, "/") + "/index.html"
 				if statF, errF := s.minioClient.StatObject(ctx, bucket, tryPath, minioGo.StatObjectOptions{}); errF == nil {
-					return s.serveS3Object(ctx, bucket, tryPath, statF, http.StatusOK, clientETag)
+					return s.serveS3Object(ctx, deployment.ProjectID, deployment.ID, bucket, tryPath, statF, http.StatusOK, clientETag)
 				}
 			}
 
@@ -243,7 +243,7 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 			if deployment.IsSPA {
 				spaPath := fmt.Sprintf("%s/index.html", deployment.OutputPrefix)
 				if statSPA, errSPA := s.minioClient.StatObject(ctx, bucket, spaPath, minioGo.StatObjectOptions{}); errSPA == nil {
-					return s.serveS3Object(ctx, bucket, spaPath, statSPA, http.StatusOK, clientETag)
+					return s.serveS3Object(ctx, deployment.ProjectID, deployment.ID, bucket, spaPath, statSPA, http.StatusOK, clientETag)
 				}
 			}
 		}
@@ -251,10 +251,10 @@ func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx cont
 		// 404.html
 		return s.handleErrorFallback(ctx, deployment)
 	}
-	return s.serveS3Object(ctx, bucket, objectPath, stat, http.StatusOK, clientETag)
+	return s.serveS3Object(ctx, deployment.ProjectID, deployment.ID, bucket, objectPath, stat, http.StatusOK, clientETag)
 }
 
-func (s *DeploymentService) serveS3Object(ctx context.Context, bucket, path string, stat minioGo.ObjectInfo, status int, clientETag string) (*response.FileDownloadDto, error) {
+func (s *DeploymentService) serveS3Object(ctx context.Context, projectID, deploymentID uint, bucket, path string, stat minioGo.ObjectInfo, status int, clientETag string) (*response.FileDownloadDto, error) {
 
 	headers := map[string]string{
 		"Cache-Control":          "public, max-age=3600",
@@ -280,11 +280,13 @@ func (s *DeploymentService) serveS3Object(ctx context.Context, bucket, path stri
 	}
 
 	return &response.FileDownloadDto{
-		Stream:      obj,
-		Size:        stat.Size,
-		ContentType: stat.ContentType,
-		NotModified: false,
-		StatusCode:  status,
+		ProjectID:    projectID,
+		DeploymentID: deploymentID,
+		Stream:       obj,
+		Size:         stat.Size,
+		ContentType:  stat.ContentType,
+		NotModified:  false,
+		StatusCode:   status,
 	}, nil
 }
 
@@ -293,7 +295,7 @@ func (s *DeploymentService) handleErrorFallback(ctx context.Context, deployment 
 	notFoundPath := fmt.Sprintf("%s/404.html", deployment.OutputPrefix)
 
 	if stat, err := s.minioClient.StatObject(ctx, bucket, notFoundPath, minioGo.StatObjectOptions{}); err == nil {
-		return s.serveS3Object(ctx, bucket, notFoundPath, stat, http.StatusNotFound, "")
+		return s.serveS3Object(ctx, deployment.ProjectID, deployment.ID, bucket, notFoundPath, stat, http.StatusNotFound, "")
 	}
 
 	return nil, core.NotFoundError()
@@ -424,6 +426,10 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
 	if err != nil || project.UserID != userID {
 		return core.ForbiddenError()
+	}
+
+	if deployment.Status == enums.DeploymentStatusLive {
+		return core.BadRequestError("Deployment is currently live, please turn it offline first")
 	}
 
 	// 2. Perform Physical Deletion (MinIO)

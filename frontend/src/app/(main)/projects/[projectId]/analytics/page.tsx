@@ -44,9 +44,9 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             <Calendar className="w-3.5 h-3.5 text-primary mr-2" />
             <span className="text-xs font-semibold">Oct 01 — Oct 31</span>
           </div>
-          <Button size="sm" variant="default" className="rounded-full px-4 font-bold shadow-lg shadow-primary/20">
+          {/* <Button size="sm" variant="default" className="rounded-full px-4 font-bold shadow-lg shadow-primary/20">
             <Download className="w-4 h-4 mr-2" /> Export
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -54,8 +54,8 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatMiniCard label="Total Visits" value="42.5k" change="+12%" icon={<Globe className="w-4 h-4 text-blue-500" />} />
         <StatMiniCard label="Avg. Load Time" value="0.8s" change="-0.2s" icon={<Zap className="w-4 h-4 text-yellow-500" />} />
-        <StatMiniCard label="Bounce Rate" value="24.2%" change="+2%" icon={<BarChart3 className="w-4 h-4 text-purple-500" />} />
-        <StatMiniCard label="Session Duration" value="3m 12s" change="+45s" icon={<Clock className="w-4 h-4 text-emerald-500" />} />
+        {/* <StatMiniCard label="Bounce Rate" value="24.2%" change="+2%" icon={<BarChart3 className="w-4 h-4 text-purple-500" />} /> */}
+        {/* <StatMiniCard label="Session Duration" value="3m 12s" change="+45s" icon={<Clock className="w-4 h-4 text-emerald-500" />} /> */}
       </div>
 
       {/* Main Content Grid */}

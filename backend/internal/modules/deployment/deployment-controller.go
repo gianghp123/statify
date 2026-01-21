@@ -9,6 +9,7 @@ import (
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/sse"
+	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/utils"
@@ -117,7 +118,7 @@ func (c *DeploymentController) GetStatus(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, core.NewApiResponse(http.StatusOK, "Deployment status retrieved successfully", deploymentDto))
 }
 
-func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
+func (c *DeploymentController) ServeFiles(ctx *gin.Context) (*wrapper.StaticServeResult, error) {
 	host := strings.Split(ctx.Request.Host, ".")[0]
 
 	clientEtag := ctx.GetHeader("If-None-Match")
@@ -135,7 +136,7 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
 
 	if err != nil {
 		core.HandleApiError(ctx, err)
-		return
+		return nil, err
 	}
 
 	if fileDTO.Stream != nil {
@@ -144,10 +145,20 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) {
 
 	if fileDTO.NotModified {
 		ctx.Status(http.StatusNotModified)
-		return
+		return &wrapper.StaticServeResult{
+			DeploymentID: fileDTO.DeploymentID,
+			ProjectID:    fileDTO.ProjectID,
+			StatusCode:   http.StatusNotModified,
+		}, nil
 	}
 
 	ctx.DataFromReader(fileDTO.StatusCode, fileDTO.Size, fileDTO.ContentType, fileDTO.Stream, fileDTO.Headers)
+	return &wrapper.StaticServeResult{
+		DeploymentID: fileDTO.DeploymentID,
+		ProjectID:    fileDTO.ProjectID,
+		StatusCode:   fileDTO.StatusCode,
+		BytesServed:  fileDTO.Size,
+	}, nil
 }
 
 func (c *DeploymentController) DeleteDeployment(ctx *gin.Context) {

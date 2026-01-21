@@ -3,6 +3,8 @@ package response
 import "io"
 
 type FileDownloadDto struct {
+	DeploymentID uint
+	ProjectID    uint
 	// The actual data stream (MinIO Object)
 	// We use ReadCloser so the Controller can close the connection after serving
 	Stream io.ReadCloser

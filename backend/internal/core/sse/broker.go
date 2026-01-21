@@ -41,7 +41,7 @@ func (b *Broker) listen() {
 		case s := <-b.unsubscribe:
 			if clients, ok := b.subscribers[s.topic]; ok {
 				delete(clients, s.client)
-				close(s.client)
+				// close(s.client)
 			}
 
 		case s := <-b.notifier:

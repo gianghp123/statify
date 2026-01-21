@@ -67,8 +67,6 @@ export async function apiFetch<T = any>(
       queryString = `?${searchParams.toString()}`;
     }
 
-    console.log(queryString)
-
     const fullUrl = `${baseUrl}${url}${queryString}`;
 
     const response = await fetch(fullUrl, { ...fetchOptions, headers });

@@ -9,11 +9,14 @@ import { notFound } from "next/navigation";
 
 interface ProjectDetailsPageProps {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
-export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
+export default async function ProjectDetailsPage({ params, searchParams }: ProjectDetailsPageProps) {
   const { projectId } = await params;
+  const { page: pageParam } = await searchParams;
   const id = parseInt(projectId);
+  const page = pageParam ? parseInt(pageParam) : 1;
 
   if (isNaN(id)) {
     return notFound();
@@ -21,7 +24,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
 
   const [projectRes, deploymentsRes] = await Promise.all([
     getProjectById(id),
-    getDeployments(id),
+    getDeployments(id, page),
   ]);
 
   if (!projectRes.success || !projectRes.data) {
