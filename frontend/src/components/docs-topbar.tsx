@@ -8,28 +8,46 @@ import { Button } from "./ui/button"
 import { logout } from "@/features/auth/services/auth.actions"
 import { Logo } from "./logo"
 import { MessageSquare, Search } from "lucide-react"
+import { cn } from "@/lib/utils"
 
+import { usePathname } from "next/navigation"
 
 export function DocsTopbar({ user }: { user: UserDto | undefined }) {
+  const pathname = usePathname();
+
   return <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div className="flex items-center gap-8">
         <Logo />
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-          <Link href="/documentation" className="text-primary hover:text-primary/80 transition-colors">Docs</Link>
-          <Link href="#" className="hover:text-foreground transition-colors">Guides</Link>
-          <Link href="/documentation/api-reference" className="hover:text-foreground transition-colors">API Reference</Link>
-          <Link href="#" className="hover:text-foreground transition-colors">Showcase</Link>
+          <Link
+            href="/documentation"
+            className={cn(
+              "transition-colors hover:text-foreground",
+              pathname === "/documentation" ? "text-primary text-bold" : "text-muted-foreground"
+            )}
+          >
+            Docs
+          </Link>
+          <Link
+            href="/documentation/api-reference"
+            className={cn(
+              "transition-colors hover:text-foreground",
+              pathname === "/documentation/api-reference" ? "text-primary text-bold" : "text-muted-foreground"
+            )}
+          >
+            API Reference
+          </Link>
         </nav>
       </div>
 
       <div className="flex items-center gap-4">
         {/* Search Bar */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-lg text-muted-foreground text-sm cursor-pointer hover:border-border/80 transition-all w-64">
+        {/* <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-lg text-muted-foreground text-sm cursor-pointer hover:border-border/80 transition-all w-64">
           <Search className="w-4 h-4" />
           <span>Search documentation...</span>
           <span className="ml-auto text-[10px] font-mono border border-border px-1 rounded">⌘K</span>
-        </div>
+        </div> */}
 
         {/* Theme Toggle */}
         <div className="w-9 h-9 flex items-center justify-center">

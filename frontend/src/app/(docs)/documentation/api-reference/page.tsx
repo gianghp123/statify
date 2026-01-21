@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { Copy, Lightbulb, FileArchive } from "lucide-react";
+import { BreadScrum } from "@/components/bread-scrum";
 
 export default function ApiReferencePage() {
   return (
     <div className="flex flex-col xl:flex-row gap-10">
       <div className="flex-1 min-w-0">
-        <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/documentation" className="hover:text-foreground transition-colors">
-            Docs
-          </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="font-medium text-foreground">API Reference</span>
-        </div>
+        <BreadScrum items={[
+          { name: "Docs", href: "/documentation" },
+          { name: "API Reference", isCurrent: true }
+        ]} />
 
         <article className="prose prose-slate dark:prose-invert max-w-none">
           <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
@@ -92,7 +90,7 @@ export default function ApiReferencePage() {
       </div>
 
       <div className="lg:col-span-5 space-y-6 xl:w-[450px]">
-        <div className="sticky top-24">
+        <div className="sticky top-16 pt-8">
           <div className="bg-slate-950 dark:bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
             <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
               <div className="flex items-center gap-2">

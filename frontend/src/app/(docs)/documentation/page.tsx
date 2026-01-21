@@ -1,20 +1,19 @@
 import { ArrowRight, Bolt, Globe, Info, Upload, Layout, PieChart } from "lucide-react";
 import Link from "next/link";
+import { BreadScrum } from "@/components/bread-scrum";
+import { DocsTOC } from "@/components/docs/docs-toc";
 
 export default function DocsPage() {
   return (
     <>
       <main className="flex-1 min-w-0 pt-8 pb-16">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link href="/documentation" className="hover:text-foreground transition-colors">
-            Docs
-          </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="font-medium text-foreground">Introduction</span>
-        </nav>
+        <BreadScrum items={[
+          { name: "Docs", href: "/documentation" },
+          { name: "Introduction", isCurrent: true }
+        ]} />
 
         <article className="max-w-none">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-4">
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-4" id="introduction">
             Introduction
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed mb-8">
@@ -31,7 +30,7 @@ export default function DocsPage() {
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
+          <h2 className="text-2xl font-bold text-foreground mt-12 mb-4" id="core-principles">
             Core Principles
           </h2>
           <p className="text-muted-foreground">
@@ -149,31 +148,14 @@ export default function DocsPage() {
 
       </main>
 
-      <aside className="hidden xl:block w-64 pt-8 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto self-start">
-        <h5 className="text-sm font-semibold mb-4 uppercase tracking-wider text-foreground">On this page</h5>
-        <ul className="space-y-3 text-sm border-l border-border">
-          <li>
-            <Link href="#" className="block pl-4 -ml-px border-l-2 border-primary text-primary font-medium">
-              Introduction
-            </Link>
-          </li>
-          <li>
-            <Link href="#project-creation" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Project Creation
-            </Link>
-          </li>
-          <li>
-            <Link href="#deployment" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Deployment via UI
-            </Link>
-          </li>
-          <li>
-            <Link href="#analytics" className="block pl-4 -ml-px border-l-2 border-transparent hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors">
-              Real-time Analytics
-            </Link>
-          </li>
-        </ul>
-      </aside>
+      <DocsTOC items={[
+        { id: "introduction", title: "Introduction" },
+        { id: "core-principles", title: "Core Principles" },
+        { id: "project-creation", title: "Project Creation" },
+        { id: "deployment", title: "Deployment via UI" },
+        { id: "analytics", title: "Real-time Analytics" },
+        { id: "settings", title: "Project Settings" },
+      ]} />
     </>
   );
 }

@@ -52,7 +52,7 @@ export default async function MainLayout({
               </a>
               <a
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                href="#"
+                href="/documentation"
               >
                 Docs
               </a>
