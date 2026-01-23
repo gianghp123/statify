@@ -14,6 +14,7 @@ import (
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
+	"github.com/gianghp/statify/internal/modules/auth/policy"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -31,7 +32,7 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 		userID       uint
 		page         int
 		limit        int
-		SetupMocks   func(t *testing.T, repo *repository.DeploymentRepositoryMock)
+		SetupMocks   func(t *testing.T, repo *repository.DeploymentRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error)
 	}{
 		{
@@ -39,7 +40,7 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 			userID: 1,
 			page:   1,
 			limit:  10,
-			SetupMocks: func(t *testing.T, repo *repository.DeploymentRepositoryMock) {
+			SetupMocks: func(t *testing.T, repo *repository.DeploymentRepositoryMock, policyMock *policy.AccessPolicyMock) {
 				repo.On("FindAllByUserID", mock.Anything, uint(1), 1, 10).Return(coreRepo.PaginatedEntities[*models.Deployment]{
 					Entities: []*models.Deployment{{
 						Model: gorm.Model{
@@ -66,8 +67,9 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
-			test.SetupMocks(t, repo)
-			deploymentService := NewDeploymentService(repo, nil, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			test.SetupMocks(t, repo, policyMock)
+			deploymentService := NewDeploymentService(repo, nil, nil, policyMock)
 			deployments, err := deploymentService.GetGlobalDeploymentHistory(context.Background(), test.userID, test.page, test.limit)
 			test.expectedFunc(t, deployments, err)
 			repo.AssertExpectations(t)
@@ -115,7 +117,7 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 		userID       uint
 		projectID    uint
 		request      *request.CreateDeploymentRequest
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, deployment *response.DeploymentDto, err error)
 	}{
 		{
@@ -125,12 +127,12 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{
 					Model:  gorm.Model{ID: 1},
 					UserID: 1,
 				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(project, nil)
 
 				// Expect StatObject check
 				minioClient.On("StatObject", mock.Anything, "static-sites", mock.MatchedBy(func(s string) bool {
@@ -168,12 +170,8 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(2), uint(1)).Return((*models.Project)(nil), core.ForbiddenError())
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.Error(t, err)
@@ -190,8 +188,8 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				fh, _ := createMockMultipartFileHeader(t, []string{"other.html"})
 				return &request.CreateDeploymentRequest{File: fh}
 			})(),
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.Error(t, err)
@@ -206,8 +204,8 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 				fh, _ := createMockMultipartFileHeader(t, []string{"index.html", "virus.exe"})
 				return &request.CreateDeploymentRequest{File: fh}
 			})(),
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.Error(t, err)
@@ -221,8 +219,8 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			request: &request.CreateDeploymentRequest{
 				File: fileHeader,
 			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
 
 				// StatObject check succeeds
 				minioClient.On("StatObject", mock.Anything, "static-sites", mock.Anything, mock.Anything).Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
@@ -247,10 +245,11 @@ func TestDeploymentService_CreateDeployment(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			minioClient := new(minio.Mock)
+			policyMock := new(policy.AccessPolicyMock)
 
-			tt.setupMocks(repo, projectRepo, minioClient)
+			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
 
-			s := NewDeploymentService(repo, projectRepo, minioClient)
+			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
 			deployment, err := s.CreateDeployment(context.TODO(), tt.userID, tt.projectID, tt.request)
 
 			tt.expectedFunc(t, deployment, err)
@@ -267,15 +266,15 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 		name         string
 		userID       uint
 		projectID    uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, deployments coreRepo.PaginatedEntities[*response.DeploymentDto], err error)
 	}{
 		{
 			name:      "Get history successfully",
 			userID:    1,
 			projectID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
 				repo.On("FindAllByProjectID", mock.Anything, uint(1), 1, 10).Return(coreRepo.PaginatedEntities[*models.Deployment]{
 					Entities:   []*models.Deployment{{ProjectID: 1}},
 					Pagination: coreRepo.Pagination{TotalCount: 1, Page: 1, Limit: 10},
@@ -292,8 +291,9 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			tt.setupMocks(repo, projectRepo)
-			s := NewDeploymentService(repo, projectRepo, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			tt.setupMocks(repo, projectRepo, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
 			deployments, err := s.GetHistory(context.TODO(), tt.userID, tt.projectID, 1, 10)
 			tt.expectedFunc(t, deployments, err)
 		})
@@ -305,16 +305,15 @@ func TestDeploymentService_GetDeploymentByID(t *testing.T) {
 		name         string
 		userID       uint
 		id           uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, deployment *response.DeploymentDto, err error)
 	}{
 		{
 			name:   "Get deployment successfully",
 			userID: 1,
 			id:     1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1}, nil)
 			},
 			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
 				assert.NoError(t, err)
@@ -327,8 +326,9 @@ func TestDeploymentService_GetDeploymentByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			tt.setupMocks(repo, projectRepo)
-			s := NewDeploymentService(repo, projectRepo, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			tt.setupMocks(repo, projectRepo, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
 			deployment, err := s.GetDeploymentByID(context.TODO(), tt.userID, tt.id)
 			tt.expectedFunc(t, deployment, err)
 		})
@@ -341,7 +341,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 		subdomain    string
 		fileName     string
 		clientEtag   string
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, fileDTO *response.FileDownloadDto, err error)
 	}{
 		{
@@ -349,7 +349,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			subdomain:  "testing",
 			fileName:   "index.html",
 			clientEtag: "",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive}
 
@@ -376,7 +376,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			subdomain:  "testing",
 			fileName:   "style.css",
 			clientEtag: "v1-cache",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive}
 
@@ -398,7 +398,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			name:      "Project not found - 404",
 			subdomain: "unknown",
 			fileName:  "index.html",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				projectRepo.On("FindBySubdomain", mock.Anything, "unknown").Return((*models.Project)(nil), nil)
 			},
 			expectedFunc: func(t *testing.T, fileDTO *response.FileDownloadDto, err error) {
@@ -410,7 +410,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			name:      "Status is not live",
 			subdomain: "testing",
 			fileName:  "index.html",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusProcessing}
 
@@ -426,7 +426,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			name:      "Page not found with custom 404",
 			subdomain: "testing",
 			fileName:  "about/",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive, OutputPrefix: "deployments/10/50", IsSPA: false}
 
@@ -460,7 +460,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			name:      "SPA Fallback successfully",
 			subdomain: "testing",
 			fileName:  "/some-route",
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				project := &models.Project{Model: gorm.Model{ID: 10}, CurrentDeploymentID: 50}
 				deployment := &models.Deployment{Model: gorm.Model{ID: 50}, ProjectID: 10, Status: enums.DeploymentStatusLive, OutputPrefix: "deployments/10/50", IsSPA: true}
 
@@ -496,12 +496,13 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			minioClient := new(minio.Mock)
+			policyMock := new(policy.AccessPolicyMock)
 
 			// Setup expectations
-			tt.setupMocks(repo, projectRepo, minioClient)
+			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
 
 			// Initialize Service
-			s := NewDeploymentService(repo, projectRepo, minioClient)
+			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
 
 			// Execute
 			fileDTO, err := s.GetCurrentDeploymentFilesByProjectSubdomain(context.TODO(), tt.subdomain, tt.fileName, tt.clientEtag)
@@ -521,16 +522,15 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 		name         string
 		userID       uint
 		deploymentID uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, err error)
 	}{
 		{
 			name:         "Turn deployment live successfully",
 			userID:       1,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
 				repo.On("Update", mock.Anything, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}).Return(nil)
 				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}).Return(nil)
 			},
@@ -542,9 +542,8 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			name:         "Status is already live",
 			userID:       1,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -554,9 +553,8 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			name:         "Project already has a live deployment",
 			userID:       1,
 			deploymentID: 2,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(2)).Return(&models.Deployment{Model: gorm.Model{ID: 2}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(2)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, &models.Deployment{Model: gorm.Model{ID: 2}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -566,9 +564,8 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			name:         "Forbidden User",
 			userID:       2,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(2), uint(1)).Return((*models.Project)(nil), (*models.Deployment)(nil), core.ForbiddenError())
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -581,8 +578,9 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			// Initialize Mocks
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			tt.setupMocks(repo, projectRepo)
-			s := NewDeploymentService(repo, projectRepo, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			tt.setupMocks(repo, projectRepo, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
 			err := s.TurnDeploymentLive(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
 		})
@@ -594,18 +592,17 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 		name         string
 		userID       uint
 		deploymentID uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, err error)
 	}{
 		{
 			name:         "Turn deployment offline successfully",
 			userID:       1,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, nil)
-				repo.On("Update", mock.Anything, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}).Return(nil)
-				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 0}).Return(nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+				repo.On("Update", mock.Anything, mock.Anything).Return(nil)
+				projectRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.NoError(t, err)
@@ -615,9 +612,8 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 			name:         "Deployment is not the current deployment",
 			userID:       1,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 2}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 2}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -627,9 +623,8 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 			name:         "Forbidden User",
 			userID:       2,
 			deploymentID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				repo.On("FindByID", mock.Anything, uint(1)).Return(&models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(2), uint(1)).Return((*models.Project)(nil), (*models.Deployment)(nil), core.ForbiddenError())
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -642,8 +637,9 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 			// Initialize Mocks
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			tt.setupMocks(repo, projectRepo)
-			s := NewDeploymentService(repo, projectRepo, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			tt.setupMocks(repo, projectRepo, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
 			err := s.TurnDeploymentOffline(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
 		})
@@ -655,26 +651,20 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 		name         string
 		userID       uint
 		deploymentID uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, err error)
 	}{
 		{
 			name:         "Delete deployment successfully",
 			userID:       1,
 			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
 				deployment := &models.Deployment{
 					Model:        gorm.Model{ID: 10},
 					ProjectID:    1,
 					OutputPrefix: "deployments/1/test",
 				}
-				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
-
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(10)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, deployment, nil)
 
 				// ListObjects mock
 				objInfoCh := make(chan minioGo.ObjectInfo, 1)
@@ -708,18 +698,8 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 			name:         "Delete deployment failure - forbidden user",
 			userID:       2,
 			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock) {
-				deployment := &models.Deployment{
-					Model:     gorm.Model{ID: 10},
-					ProjectID: 1,
-				}
-				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
-
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(2), uint(10)).Return((*models.Project)(nil), (*models.Deployment)(nil), core.ForbiddenError())
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -735,10 +715,11 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			minioClient := new(minio.Mock)
+			policyMock := new(policy.AccessPolicyMock)
 
-			tt.setupMocks(repo, projectRepo, minioClient)
+			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
 
-			s := NewDeploymentService(repo, projectRepo, minioClient)
+			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
 			err := s.DeleteDeployment(context.TODO(), tt.deploymentID, tt.userID)
 
 			tt.expectedFunc(t, err)
@@ -755,26 +736,20 @@ func TestDeploymentService_ToggleIsSPAMode(t *testing.T) {
 		name         string
 		userID       uint
 		deploymentID uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock)
+		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock)
 		expectedFunc func(t *testing.T, err error)
 	}{
 		{
 			name:         "Toggle SPA mode successfully",
 			userID:       1,
 			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
 				deployment := &models.Deployment{
 					Model:     gorm.Model{ID: 10},
 					ProjectID: 1,
 					IsSPA:     false,
 				}
-				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
-
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(10)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, deployment, nil)
 
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
 					return d.ID == 10 && d.IsSPA == true
@@ -788,18 +763,8 @@ func TestDeploymentService_ToggleIsSPAMode(t *testing.T) {
 			name:         "Toggle SPA mode failure - forbidden user",
 			userID:       2,
 			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock) {
-				deployment := &models.Deployment{
-					Model:     gorm.Model{ID: 10},
-					ProjectID: 1,
-				}
-				repo.On("FindByID", mock.Anything, uint(10)).Return(deployment, nil)
-
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(project, nil)
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock) {
+				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(2), uint(10)).Return((*models.Project)(nil), (*models.Deployment)(nil), core.ForbiddenError())
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -811,8 +776,9 @@ func TestDeploymentService_ToggleIsSPAMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			tt.setupMocks(repo, projectRepo)
-			s := NewDeploymentService(repo, projectRepo, nil)
+			policyMock := new(policy.AccessPolicyMock)
+			tt.setupMocks(repo, projectRepo, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
 			err := s.ToggleIsSPAMode(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
 		})

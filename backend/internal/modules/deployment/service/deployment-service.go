@@ -13,6 +13,7 @@ import (
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
+	"github.com/gianghp/statify/internal/modules/auth/policy"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -20,16 +21,18 @@ import (
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	minioGo "github.com/minio/minio-go/v7"
+	"gorm.io/gorm"
 )
 
 type DeploymentService struct {
 	repo        repository.IDeploymentRepository
 	projectRepo projectRepo.IProjectRepository
 	minioClient minio.Interface
+	policy      policy.IAccessPolicy
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient minio.Interface) *DeploymentService {
-	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient}
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
+	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient, policy: policy}
 }
 
 func (s *DeploymentService) GetGlobalDeploymentHistory(ctx context.Context, userId uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
@@ -60,17 +63,9 @@ func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, project
 		Pagination: coreRepo.Pagination{Page: page, Limit: limit},
 	}
 
-	project, err := s.projectRepo.FindByID(ctx, projectID)
+	_, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
 	if err != nil {
-		return result, core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return result, core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return result, core.ForbiddenError()
+		return result, err
 	}
 
 	deployments, err := s.repo.FindAllByProjectID(ctx, projectID, page, limit)
@@ -90,26 +85,9 @@ func (s *DeploymentService) GetHistory(ctx context.Context, userID uint, project
 }
 
 func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, id uint) (*response.DeploymentDto, error) {
-	deployment, err := s.repo.FindByID(ctx, id)
+	_, deployment, err := s.policy.CheckDeploymentAccess(ctx, userID, id)
 	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if deployment == nil {
-		return nil, core.NotFoundError()
-	}
-
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return nil, core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return nil, core.ForbiddenError()
+		return nil, err
 	}
 
 	deploymentDto, err := utils.EntityToDto[*response.DeploymentDto](deployment)
@@ -122,15 +100,9 @@ func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, 
 
 func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, projectID uint, req *request.CreateDeploymentRequest) (*response.DeploymentDto, error) {
 	// 1. Authorization & Validation
-	project, err := s.projectRepo.FindByID(ctx, projectID)
+	_, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
 	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-	if project == nil {
-		return nil, core.NotFoundError()
-	}
-	if project.UserID != userID {
-		return nil, core.ForbiddenError()
+		return nil, err
 	}
 
 	// 2. Zip Safety Analysis (Prevent Disk Fill / Zip Bomb)
@@ -302,23 +274,9 @@ func (s *DeploymentService) handleErrorFallback(ctx context.Context, deployment 
 }
 
 func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID uint, userID uint) error {
-	deployment, err := s.repo.FindByID(ctx, deploymentID)
-
+	project, deployment, err := s.policy.CheckDeploymentAccess(ctx, userID, deploymentID)
 	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return core.ForbiddenError()
+		return err
 	}
 
 	if project.CurrentDeploymentID != 0 {
@@ -347,29 +305,16 @@ func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID
 }
 
 func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymentID uint, userID uint) error {
-	deployment, err := s.repo.FindByID(ctx, deploymentID)
-
+	project, _, err := s.policy.CheckDeploymentAccess(ctx, userID, deploymentID)
 	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return core.ForbiddenError()
+		return err
 	}
 
 	if project.CurrentDeploymentID != deploymentID {
 		return core.BadRequestError("Deployment is not the current deployment")
 	}
 
+	deployment := &models.Deployment{Model: gorm.Model{ID: deploymentID}}
 	deployment.Status = enums.DeploymentStatusReady
 	if err := s.repo.Update(ctx, deployment); err != nil {
 		return core.ParseDatabaseError(err)
@@ -384,23 +329,9 @@ func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymen
 }
 
 func (s *DeploymentService) ToggleIsSPAMode(ctx context.Context, deploymentID uint, userID uint) error {
-	deployment, err := s.repo.FindByID(ctx, deploymentID)
-
+	_, deployment, err := s.policy.CheckDeploymentAccess(ctx, userID, deploymentID)
 	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return core.NotFoundError()
-	}
-
-	if project.UserID != userID {
-		return core.ForbiddenError()
+		return err
 	}
 
 	deployment.IsSPA = !deployment.IsSPA
@@ -414,18 +345,10 @@ func (s *DeploymentService) ToggleIsSPAMode(ctx context.Context, deploymentID ui
 func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID uint, userID uint) error {
 	// 1. Fetch deployment and verify ownership
 	// We need the OutputPrefix from the DB before we delete the record
-	deployment, err := s.repo.FindByID(ctx, deploymentID)
-	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-	if deployment == nil {
-		return core.NotFoundError()
-	}
-
 	// Security: Ensure the user owns the project this deployment belongs to
-	project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
-	if err != nil || project.UserID != userID {
-		return core.ForbiddenError()
+	_, deployment, err := s.policy.CheckDeploymentAccess(ctx, userID, deploymentID)
+	if err != nil {
+		return err
 	}
 
 	if deployment.Status == enums.DeploymentStatusLive {

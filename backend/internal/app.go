@@ -13,6 +13,7 @@ import (
 	analyticsService "github.com/gianghp/statify/internal/modules/analytics/service"
 	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
 	authModule "github.com/gianghp/statify/internal/modules/auth"
+	"github.com/gianghp/statify/internal/modules/auth/policy"
 	authService "github.com/gianghp/statify/internal/modules/auth/service"
 	deploymentModule "github.com/gianghp/statify/internal/modules/deployment"
 	deploymentRepository "github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -68,10 +69,12 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	metricCollector.Start(context.Background())
 	analyzerWrapper := wrapper.NewAnalyzerWrapper(metricCollector)
 
+	accessPolicy := policy.NewAccessPolicy(projectRepo, deploymentRepo)
+
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
-	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper)
-	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClientWrapper)
+	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper, accessPolicy)
+	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, minioClientWrapper, accessPolicy)
 	userSvc := userService.NewUserService(userRepo)
 	analyticsSvc := analyticsService.NewAnalyticsService(metricsRepo)
 

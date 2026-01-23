@@ -9,6 +9,7 @@ import (
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
+	"github.com/gianghp/statify/internal/modules/auth/policy"
 	deploymentRepo "github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
 	"github.com/gianghp/statify/internal/modules/project/dtos/response"
@@ -22,10 +23,11 @@ type ProjectService struct {
 	repo           repository.IProjectRepository
 	deploymentRepo deploymentRepo.IDeploymentRepository
 	minioClient    minio.Interface
+	policy         policy.IAccessPolicy
 }
 
-func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, minioClient minio.Interface) *ProjectService {
-	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, minioClient: minioClient}
+func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *ProjectService {
+	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, minioClient: minioClient, policy: policy}
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *request.CreateProjectRequest) (*response.ProjectDto, error) {
@@ -76,18 +78,10 @@ func (s *ProjectService) ListProjects(ctx context.Context, userID uint, page int
 }
 
 func (s *ProjectService) GetProjectByID(ctx context.Context, id uint, userID uint) (*response.ProjectDto, error) {
-	project, err := s.repo.FindByID(ctx, id)
+	project, err := s.policy.CheckProjectAccess(ctx, userID, id)
 
 	if err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	if project.UserID != userID {
-		return nil, core.ForbiddenError()
-	}
-
-	if project == nil {
-		return nil, core.NotFoundError()
+		return nil, err
 	}
 
 	projectDto, err := s.transformProjectToDto(project)
@@ -117,14 +111,10 @@ func (s *ProjectService) transformProjectToDto(project *models.Project) (*respon
 	return projectDto, nil
 }
 
-func (s *ProjectService) UpdateProject(ctx context.Context, id uint, req *request.UpdateProjectRequest) error {
-	project, err := s.repo.FindByID(ctx, id)
+func (s *ProjectService) UpdateProject(ctx context.Context, userID uint, id uint, req *request.UpdateProjectRequest) error {
+	project, err := s.policy.CheckProjectAccess(ctx, userID, id)
 	if err != nil {
-		return core.ParseDatabaseError(err)
-	}
-
-	if project == nil {
-		return core.NotFoundError()
+		return err
 	}
 
 	project.Name = req.Name
@@ -143,13 +133,9 @@ func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, user
 		txDeploymentRepo := s.deploymentRepo.WithTx(tx)
 
 		// 1. Fetch the project and its deployments first to get the MinIO keys
-		project, err := txRepo.FindByID(ctx, projectID)
+		project, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
 		if err != nil {
-			return core.ParseDatabaseError(err)
-		}
-
-		if project.UserID != userID {
-			return core.ForbiddenError()
+			return err
 		}
 
 		deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, projectID, 1, 1000)

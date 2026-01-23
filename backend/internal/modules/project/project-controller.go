@@ -88,11 +88,18 @@ func (c *ProjectController) GetProject(ctx *gin.Context) {
 }
 
 func (c *ProjectController) UpdateProject(ctx *gin.Context) {
-	// userID, err := utils.GetUserIDFromContext(ctx)
-	// if err != nil {
-	// 	core.HandleApiError(ctx, core.UnauthorizedError())
-	// 	return
-	// }
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		core.HandleApiError(ctx, core.UnauthorizedError())
+		return
+	}
+
+	idStr := ctx.Param("project_id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid project ID"))
+		return
+	}
 
 	var req request.UpdateProjectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -100,8 +107,12 @@ func (c *ProjectController) UpdateProject(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual update logic with service
-	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Project updated successfully (placeholder)", nil))
+	if err := c.service.UpdateProject(ctx, userID, uint(id), &req); err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewApiResponse[any](http.StatusOK, "Project updated successfully", nil))
 }
 
 func (c *ProjectController) DeleteProject(ctx *gin.Context) {

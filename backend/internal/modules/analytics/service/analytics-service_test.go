@@ -63,16 +63,16 @@ func TestAnalyticsService_GetComprehensiveMetrics(t *testing.T) {
 					},
 					ProjectOverviewMetrics: response.ProjectOverviewMetricsDTO{
 						TotalRequests:    2,
-						TotalBandwidth:   100,
-						AvgResponseMs:    float64(10) / float64(2),
-						ErrorRatePercent: float64(0) / float64(2),
+						TotalBandwidth:   float64(100) / (1024 * 1024),
+						AvgResponseMs:    float64(10) / 2,
+						ErrorRatePercent: float64(0) / 2,
 					},
 					TimeSeriesPoints: []response.TimeSeriesPointDTO{
-						{Timestamp: start, Requests: 2, Bandwidth: 100},
-						{Timestamp: start.Add(-45 * time.Minute), Requests: 3, Bandwidth: 150},
-						{Timestamp: start.Add(-30 * time.Minute), Requests: 1, Bandwidth: 50},
-						{Timestamp: start.Add(-15 * time.Minute), Requests: 2, Bandwidth: 100},
-						{Timestamp: end, Requests: 2, Bandwidth: 100},
+						{Timestamp: start, Requests: 2, Bandwidth: float64(100) / (1024 * 1024)},
+						{Timestamp: start.Add(-45 * time.Minute), Requests: 3, Bandwidth: float64(150) / (1024 * 1024)},
+						{Timestamp: start.Add(-30 * time.Minute), Requests: 1, Bandwidth: float64(50) / (1024 * 1024)},
+						{Timestamp: start.Add(-15 * time.Minute), Requests: 2, Bandwidth: float64(100) / (1024 * 1024)},
+						{Timestamp: end, Requests: 2, Bandwidth: float64(100) / (1024 * 1024)},
 					},
 				}
 
