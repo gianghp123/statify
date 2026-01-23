@@ -101,8 +101,8 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	analyticsMod.RegisterRoutes(api, authMiddleware)
 
 	// Start the listener in a goroutine
-	go listener.Run(sse.DeploymentStatusEvent)
-	go listener.Run(sse.AnalyticsEvent)
+	go listener.Run(context.Background(), sse.DeploymentStatusEvent)
+	go listener.Run(context.Background(), sse.AnalyticsEvent)
 
 	return &App{
 		Router: router,

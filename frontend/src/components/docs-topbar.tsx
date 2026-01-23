@@ -1,14 +1,14 @@
 'use client'
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { logout } from "@/features/auth/services/auth.actions"
 import { UserDto } from "@/features/users/dtos/response/user.response.dto"
+import { cn } from "@/lib/utils"
+import { MessageSquare } from "lucide-react"
 import Link from "next/link"
+import { Logo } from "./logo"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
-import { logout } from "@/features/auth/services/auth.actions"
-import { Logo } from "./logo"
-import { MessageSquare, Search } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 import { usePathname } from "next/navigation"
 
@@ -42,12 +42,6 @@ export function DocsTopbar({ user }: { user: UserDto | undefined }) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Search Bar */}
-        {/* <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-lg text-muted-foreground text-sm cursor-pointer hover:border-border/80 transition-all w-64">
-          <Search className="w-4 h-4" />
-          <span>Search documentation...</span>
-          <span className="ml-auto text-[10px] font-mono border border-border px-1 rounded">⌘K</span>
-        </div> */}
 
         {/* Theme Toggle */}
         <div className="w-9 h-9 flex items-center justify-center">

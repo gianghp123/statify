@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/jackc/pgx/v5"
@@ -20,27 +21,41 @@ func NewPostgresNotificationListener(connStr string, broker *sse.Broker) *Postgr
 	}
 }
 
-func (l *PostgresNotificationListener) Run(topic string) {
-	ctx := context.Background()
+func (l *PostgresNotificationListener) Run(ctx context.Context, topic string) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Postgres listener stopped")
+			return
+		default:
+		}
+
+		if err := l.listenOnce(ctx, topic); err != nil {
+			log.Printf("Listener error: %v. Reconnecting in 5s...", err)
+			time.Sleep(5 * time.Second)
+		}
+	}
+
+}
+
+func (l *PostgresNotificationListener) listenOnce(ctx context.Context, topic string) error {
 	conn, err := pgx.Connect(ctx, l.connStr)
+
 	if err != nil {
 		log.Printf("Listener connection error: %v", err)
-		return
+		return err
 	}
 	defer conn.Close(ctx)
 
 	conn.Exec(ctx, "LISTEN "+topic)
 
 	for {
-		// This line blocks the goroutine until a message arrives
 		notification, err := conn.WaitForNotification(ctx)
 		if err != nil {
 			log.Printf("Error waiting for notification: %v", err)
-			// In production, add a "sleep and retry" here to handle DB restarts
-			return
+			return err
 		}
 
-		// Process the message (e.g., send to a Go channel or trigger a function)
 		l.broker.Notify(notification.Payload, topic)
 	}
 }

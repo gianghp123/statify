@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { Copy, Lightbulb, FileArchive } from "lucide-react";
 import { BreadScrum } from "@/components/bread-scrum";
+import { Copy, FileArchive } from "lucide-react";
 
 export default function ApiReferencePage() {
   return (

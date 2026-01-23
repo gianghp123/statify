@@ -34,19 +34,19 @@ export default async function LandingPage() {
               NOW IN PUBLIC BETA
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 bg-linear-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
-              Static Hosting for the <br />
-              <span className="text-primary italic">Modern Web.</span>
+              Simple Hosting for <br />
+              <span className="text-primary italic">Side Projects.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed">
-              The fastest way to deploy your static sites. Global edge network,
-              automatic CI/CD, and deep analytics built-in.
+              The easiest way to put your HTML/JS sites online. Built for developers
+              who want to ship code, not manage infrastructure.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 rounded-2xl text-lg font-bold w-full sm:w-auto shadow-neon">
-                <Link href="/register">Deploy Now — It's Free</Link>
+                <Link href="/register">Start Hosting Free</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-border/50 hover:bg-accent/50 px-8 py-6 rounded-2xl text-lg font-bold w-full sm:w-auto text-foreground transition-all">
-                <Link href="/documentation">View Documentation</Link>
+                <Link href="/documentation">How it works</Link>
               </Button>
             </div>
 
@@ -70,29 +70,51 @@ export default async function LandingPage() {
                     </Button>
                   </div>
                   <div className="space-y-4">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-muted/10 rounded-xl border border-border/20 hover:border-primary/20 transition-all group/item">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">
-                            <Globe size={20} />
-                          </div>
-                          <div className="text-left">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-foreground">my-awesome-site-{i}</span>
-                              <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full uppercase tracking-wider">Live</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground font-mono">https://site-{i}.{process.env.NEXT_PUBLIC_PROJECT_URL}</div>
-                          </div>
+                    {/* Updated mock data to look more like personal projects */}
+                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-xl border border-border/20 hover:border-primary/20 transition-all group/item">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">
+                          <Globe size={20} />
                         </div>
-                        <div className="flex items-center gap-8 text-xs text-muted-foreground">
-                          <div className="hidden sm:flex items-center gap-2">
-                            <GitBranch size={14} /> main
+                        <div className="text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">portfolio-v2</span>
+                            <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full uppercase tracking-wider">Live</span>
                           </div>
-                          <div className="hidden sm:block">Jan 12, 2026</div>
-                          <MoreVertical size={16} className="cursor-pointer hover:text-foreground transition-colors" />
+                          <div className="text-xs text-muted-foreground font-mono">https://portfolio.{process.env.NEXT_PUBLIC_PROJECT_URL}</div>
                         </div>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-8 text-xs text-muted-foreground">
+                        <div className="hidden sm:flex items-center gap-2">
+                          <GitBranch size={14} /> main
+                        </div>
+                        <div className="hidden sm:block">Just now</div>
+                        <MoreVertical size={16} className="cursor-pointer hover:text-foreground transition-colors" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-xl border border-border/20 hover:border-primary/20 transition-all group/item">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">
+                          <Globe size={20} />
+                        </div>
+                        <div className="text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">weekend-hack</span>
+                            <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full uppercase tracking-wider">Live</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">https://hack.{process.env.NEXT_PUBLIC_PROJECT_URL}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-8 text-xs text-muted-foreground">
+                        <div className="hidden sm:flex items-center gap-2">
+                          <GitBranch size={14} /> dev
+                        </div>
+                        <div className="hidden sm:block">2 days ago</div>
+                        <MoreVertical size={16} className="cursor-pointer hover:text-foreground transition-colors" />
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -105,29 +127,29 @@ export default async function LandingPage() {
       <section id="features" className="py-24 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Everything you need for Static Sites</h2>
-            <p className="text-muted-foreground">Built by developers, for developers.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Essential Features, No Bloat</h2>
+            <p className="text-muted-foreground">Just the tools you need to keep your site online.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <FeatureCard
               icon={<Rocket />}
-              title="One-Click Deploy"
-              description="Connect your GitHub and we'll handle the rest. Automatic builds on every push."
+              title="Git Integration"
+              description="Connect your GitHub repo. We auto-build and deploy whenever you push to main."
             />
             <FeatureCard
               icon={<Globe />}
-              title="Global Edge"
-              description="Your site is served from 300+ locations worldwide for lightning-fast speeds."
+              title="Standard Edge"
+              description="Your content is cached and served via CDN for reliable speed anywhere."
             />
             <FeatureCard
               icon={<Eye />}
-              title="Live Previews"
-              description="Unique URLs for every pull request to review changes before they go live."
+              title="Instant Updates"
+              description="Cache invalidation happens automatically. Your changes go live in seconds."
             />
             <FeatureCard
               icon={<BarChart3 />}
-              title="Deep Analytics"
-              description="Privacy-first analytics to understand your visitors without cookies."
+              title="Simple Metrics"
+              description="Basic page view counts to track your growth without invading user privacy."
             />
           </div>
         </div>
@@ -138,22 +160,22 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-3xl md:text-5xl font-bold mb-8 text-foreground">Optimized for your workflow.</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-8 text-foreground">Built for the weekend hacker.</h2>
               <div className="space-y-6">
                 <WorkflowItem
                   icon={<User />}
                   title="Personal Portfolios"
-                  description="Showcase your work on a platform that's as fast as your code."
+                  description="A home for your resume and projects. Free SSL included automatically."
                 />
                 <WorkflowItem
                   icon={<BookOpen />}
-                  title="Documentation"
-                  description="Host your project docs with perfect SEO and instant search."
+                  title="Project Docs"
+                  description="Hosting markdown-based documentation sites works right out of the box."
                 />
                 <WorkflowItem
                   icon={<Megaphone />}
-                  title="Landing Pages"
-                  description="Spin up marketing pages in seconds with our high-performance infrastructure."
+                  title="Quick Demos"
+                  description="Need to share a WIP with a friend? Spin up a deployment link instantly."
                 />
               </div>
             </div>
@@ -175,15 +197,15 @@ export default async function LandingPage() {
       <section className="py-32 relative">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center glass-panel py-16 rounded-[40px] border border-primary/20 relative overflow-hidden shadow-2xl dark:shadow-black/50">
           <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-primary/10 rounded-full blur-xl" />
-          <h2 className="text-4xl md:text-6xl font-extrabold mb-6 text-foreground">From Code to Live <br />in Seconds.</h2>
+          <h2 className="text-4xl md:text-6xl font-extrabold mb-6 text-foreground">Ready to ship that <br />side project?</h2>
           <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
-            Join thousands of developers who trust Statify for their hosting needs.
-            Start for free, upgrade as you grow.
+            Free for personal use. Open source under the hood.
+            No credit card required to get started.
           </p>
           <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-10 py-7 rounded-2xl text-xl font-bold hover:scale-105 transition-transform shadow-neon">
             <Link href="/register">Deploy Your First Site</Link>
           </Button>
-          <p className="mt-6 text-sm text-muted-foreground">No credit card required to get started.</p>
+          <p className="mt-6 text-sm text-muted-foreground">Maintained by a solo dev.</p>
         </div>
       </section>
     </div>

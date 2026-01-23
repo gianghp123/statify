@@ -1,5 +1,5 @@
-import { BarChart3, TrendingUp, Users, Clock, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { ProjectOverviewMetricsDTO } from "@/features/analytics/dtos/response/analytic-metrics.dto";
+import { Activity, BarChart3, Clock, Users } from "lucide-react";
 
 
 interface AnalyticsStatsProps {
@@ -11,29 +11,21 @@ export function AnalyticsStats({ metrics }: AnalyticsStatsProps) {
     {
       title: "Total Requests",
       value: metrics.totalRequests.toLocaleString(),
-      change: "+12.5%", // TODO: Calculate change if previous data available
-      increasing: true,
       icon: Users,
     },
     {
       title: "Bandwidth Used",
       value: `${metrics.totalBandwidth.toFixed(2)} MB`,
-      change: "+18.2%",
-      increasing: true,
       icon: BarChart3,
     },
     {
       title: "Avg. Response Time",
       value: `${metrics.avgResponseMs.toFixed(0)}ms`,
-      change: "-4ms",
-      increasing: false, // lower is better for latency, but typically green means good. Adjust logic if needed.
       icon: Clock,
     },
     {
       title: "Error Rate",
       value: `${metrics.errorRatePercent.toFixed(2)}%`,
-      change: "+0.01%",
-      increasing: false, // lower is better
       icon: Activity,
     },
   ];
