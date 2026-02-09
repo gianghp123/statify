@@ -10,5 +10,5 @@ import (
 type IJobQueueRepository interface {
 	Create(ctx context.Context, job *models.JobQueue) error
 	Update(ctx context.Context, job *models.JobQueue) error
-	FindLatestByStatus(ctx context.Context, status enums.JobQueueStatus) (*models.JobQueue, error)
+	ClaimNextQueueByType(ctx context.Context, jobType enums.JobQueueType) (*models.JobQueue, error)
 }

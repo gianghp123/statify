@@ -11,6 +11,7 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/modules/deployment/workers"
+	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/joho/godotenv"
@@ -50,9 +51,10 @@ func main() {
 
 	deploymentRepository := repository.NewDeploymentRepository(db)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
-	fileProcessor := service.NewFileProcessor(minioClientWrapper, deploymentRepository)
-	deploymentWorker := workers.NewDeploymentWorker(deploymentRepository, fileProcessor)
+	fileProcessor := service.NewFileProcessor(minioClientWrapper, deploymentRepository, utils.GetEnv("MINIO_BUCKET", "statify"))
+	jobQueueRepository := jobQueueRepo.NewJobQueueRepository(db)
+	deploymentWorker := workers.NewDeploymentWorker(jobQueueRepository, deploymentRepository, fileProcessor)
 
-	deploymentWorker.Run(context.Background(), core.MaxGoroutines, 2*time.Second)
+	deploymentWorker.Run(context.Background(), core.MaxProcessGoroutines, core.MaxDeleteGoroutines, 2*time.Second, 5)
 
 }

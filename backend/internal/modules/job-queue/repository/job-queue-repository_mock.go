@@ -17,8 +17,8 @@ func (m *JobQueueRepositoryMock) Create(ctx context.Context, job *models.JobQueu
 	return args.Error(0)
 }
 
-func (m *JobQueueRepositoryMock) FindLatestByStatus(ctx context.Context, status enums.JobQueueStatus) (*models.JobQueue, error) {
-	args := m.Called(ctx, status)
+func (m *JobQueueRepositoryMock) ClaimNextQueueByType(ctx context.Context, jobType enums.JobQueueType) (*models.JobQueue, error) {
+	args := m.Called(ctx, jobType)
 	return args.Get(0).(*models.JobQueue), args.Error(1)
 }
 
