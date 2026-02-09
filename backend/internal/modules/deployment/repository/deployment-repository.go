@@ -91,59 +91,8 @@ func (r *DeploymentRepository) Update(ctx context.Context, deployment *models.De
 	return r.db.WithContext(ctx).Save(deployment).Error
 }
 
-func (r *DeploymentRepository) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
-	return r.db.WithContext(ctx).Transaction(fn)
-}
-
-func (r *DeploymentRepository) WithTx(tx *gorm.DB) IDeploymentRepository {
-	if tx == nil {
-		return r
-	}
-	return &DeploymentRepository{db: tx}
-}
-
 func (r *DeploymentRepository) Delete(ctx context.Context, deployment *models.Deployment) error {
-	return r.db.WithContext(ctx).Unscoped().Delete(deployment).Error
-}
-
-func (r *DeploymentRepository) ClaimNextQueued(ctx context.Context) (*models.Deployment, error) {
-	var deployment models.Deployment
-
-	tx := r.db.WithContext(ctx).Raw(`
-        UPDATE deployments
-        SET status = ?
-        WHERE id = (
-            SELECT id
-            FROM deployments
-            WHERE status = ?
-            ORDER BY created_at
-            FOR UPDATE SKIP LOCKED
-            LIMIT 1
-        )
-        RETURNING *;
-    `, enums.DeploymentStatusProcessing, enums.DeploymentStatusQueued).Scan(&deployment)
-
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	if tx.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-
-	if tx.RowsAffected > 0 {
-		tx.Exec(`
-            SELECT pg_notify(?, json_build_object(
-                'id', ?::text,
-                'status', ?::text
-            )::text)`,
-			sse.DeploymentStatusEvent,
-			deployment.ID,
-			enums.DeploymentStatusProcessing,
-		)
-	}
-
-	return &deployment, nil
+	return r.db.WithContext(ctx).Delete(deployment).Error
 }
 
 func (r *DeploymentRepository) MarkReady(

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
@@ -16,7 +15,6 @@ import (
 	"github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
-	"gorm.io/gorm"
 )
 
 type ProjectService struct {
@@ -128,46 +126,5 @@ func (s *ProjectService) UpdateProject(ctx context.Context, userID uint, id uint
 }
 
 func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, userID uint) error {
-	return s.repo.Transaction(ctx, func(tx *gorm.DB) error {
-		txRepo := s.repo.WithTx(tx)
-		txDeploymentRepo := s.deploymentRepo.WithTx(tx)
-
-		// 1. Fetch the project and its deployments first to get the MinIO keys
-		project, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
-		if err != nil {
-			return err
-		}
-
-		deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, projectID, 1, 1000)
-		if err != nil {
-			return core.ParseDatabaseError(err)
-		}
-
-		// 2. Delete from DB (The migration handles cascading to deployments)
-		if err := txRepo.Delete(ctx, project); err != nil {
-			return core.ParseDatabaseError(err)
-		}
-
-		// 3. Database transaction is ready to commit.
-		// Now attempt MinIO cleanup.
-		bucket := utils.GetEnv("MINIO_BUCKET", "static-sites")
-		for _, d := range deployments.Entities {
-			// Delete the versioned folder
-			if d.OutputPrefix != "" {
-				err := s.minioClient.RemoveObjectsByPrefix(ctx, bucket, d.OutputPrefix)
-				if err != nil {
-					log.Printf("Failed to delete MinIO prefix %s: %v", d.OutputPrefix, err)
-				}
-			} else {
-				// Fallback for old style paths if any
-				prefix := fmt.Sprintf("deployments/%d/%d", d.ProjectID, d.ID)
-				err := s.minioClient.RemoveObjectsByPrefix(ctx, bucket, prefix)
-				if err != nil {
-					log.Printf("Failed to delete MinIO fallback prefix %s: %v", prefix, err)
-				}
-			}
-		}
-
-		return nil // If nil is returned, GORM commits the DB transaction
-	})
+	return nil
 }

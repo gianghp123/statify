@@ -17,6 +17,7 @@ import (
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
+	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
@@ -25,14 +26,15 @@ import (
 )
 
 type DeploymentService struct {
-	repo        repository.IDeploymentRepository
-	projectRepo projectRepo.IProjectRepository
-	minioClient minio.Interface
-	policy      policy.IAccessPolicy
+	repo         repository.IDeploymentRepository
+	projectRepo  projectRepo.IProjectRepository
+	jobQueueRepo jobQueueRepo.IJobQueueRepository
+	minioClient  minio.Interface
+	policy       policy.IAccessPolicy
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
-	return &DeploymentService{repo: repo, projectRepo: projectRepo, minioClient: minioClient, policy: policy}
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
+	return &DeploymentService{repo: repo, projectRepo: projectRepo, jobQueueRepo: jobQueueRepo, minioClient: minioClient, policy: policy}
 }
 
 func (s *DeploymentService) GetGlobalDeploymentHistory(ctx context.Context, userId uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
@@ -352,8 +354,17 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 		return core.BadRequestError("Deployment is currently live, please turn it offline first")
 	}
 
-	deployment.Status = enums.DeploymentStatusPendingDelete
-	if err := s.repo.Update(ctx, deployment); err != nil {
+	if err := s.repo.Delete(ctx, deployment); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	jobQueue := models.JobQueue{
+		Type:         enums.JobQueueTypeDeploymentDelete,
+		DeploymentID: deploymentID,
+		Status:       enums.JobQueueStatusPending,
+	}
+
+	if err := s.jobQueueRepo.Create(ctx, &jobQueue); err != nil {
 		return core.ParseDatabaseError(err)
 	}
 

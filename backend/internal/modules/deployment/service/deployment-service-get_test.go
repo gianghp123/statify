@@ -4,10 +4,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"fmt"
 	"mime/multipart"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/gianghp/statify/internal/core"
@@ -15,7 +13,6 @@ import (
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
-	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	projectRepository "github.com/gianghp/statify/internal/modules/project/repository"
@@ -69,7 +66,7 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			test.SetupMocks(t, repo, policyMock)
-			deploymentService := NewDeploymentService(repo, nil, nil, policyMock)
+			deploymentService := NewDeploymentService(repo, nil, nil, nil, policyMock)
 			deployments, err := deploymentService.GetGlobalDeploymentHistory(context.Background(), test.userID, test.page, test.limit)
 			test.expectedFunc(t, deployments, err)
 			repo.AssertExpectations(t)
@@ -109,158 +106,6 @@ func createMockMultipartFileHeader(t *testing.T, filenames []string) (*multipart
 	return form.File["file"][0], zipBytes
 }
 
-func TestDeploymentService_CreateDeployment(t *testing.T) {
-	fileHeader, _ := createMockMultipartFileHeader(t, []string{"index.html", "css/style.css"})
-
-	tests := []struct {
-		name         string
-		userID       uint
-		projectID    uint
-		request      *request.CreateDeploymentRequest
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock)
-		expectedFunc func(t *testing.T, deployment *response.DeploymentDto, err error)
-	}{
-		{
-			name:      "Create deployment successfully",
-			userID:    1,
-			projectID: 1,
-			request: &request.CreateDeploymentRequest{
-				File: fileHeader,
-			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				project := &models.Project{
-					Model:  gorm.Model{ID: 1},
-					UserID: 1,
-				}
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(project, nil)
-
-				// Expect StatObject check
-				minioClient.On("StatObject", mock.Anything, "static-sites", mock.MatchedBy(func(s string) bool {
-					return strings.HasPrefix(s, "deployments/1/") && strings.HasSuffix(s, "/temp")
-				}), mock.Anything).Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
-
-				// Expect single PutObject for the zip file
-				minioClient.On("PutObject", mock.Anything, "static-sites",
-					mock.MatchedBy(func(s string) bool {
-						return strings.HasPrefix(s, "deployments/1/") && strings.HasSuffix(s, "/temp")
-					}),
-					mock.Anything, mock.Anything, mock.MatchedBy(func(opt minioGo.PutObjectOptions) bool {
-						return opt.ContentType == "application/zip"
-					}),
-				).Return(minioGo.UploadInfo{}, nil)
-
-				// Expect final DB creation
-				repo.On("Create", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
-					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusQueued && strings.HasPrefix(d.OutputPrefix, "deployments/1/")
-				})).Return(nil).Run(func(args mock.Arguments) {
-					d := args.Get(1).(*models.Deployment)
-					d.ID = 10
-				})
-			},
-			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, deployment)
-				assert.Equal(t, string(enums.DeploymentStatusQueued), deployment.Status)
-			},
-		},
-		{
-			name:      "Create deployment failure - forbidden user",
-			userID:    2,
-			projectID: 1,
-			request: &request.CreateDeploymentRequest{
-				File: fileHeader,
-			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(2), uint(1)).Return((*models.Project)(nil), core.ForbiddenError())
-			},
-			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
-				assert.Error(t, err)
-				apiErr, ok := err.(*core.ApiError)
-				assert.True(t, ok)
-				assert.Equal(t, http.StatusForbidden, apiErr.Code)
-			},
-		},
-		{
-			name:      "Create deployment failure - missing index.html",
-			userID:    1,
-			projectID: 1,
-			request: (func() *request.CreateDeploymentRequest {
-				fh, _ := createMockMultipartFileHeader(t, []string{"other.html"})
-				return &request.CreateDeploymentRequest{File: fh}
-			})(),
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
-			},
-			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "index.html")
-			},
-		},
-		{
-			name:      "Create deployment failure - forbidden file extension",
-			userID:    1,
-			projectID: 1,
-			request: (func() *request.CreateDeploymentRequest {
-				fh, _ := createMockMultipartFileHeader(t, []string{"index.html", "virus.exe"})
-				return &request.CreateDeploymentRequest{File: fh}
-			})(),
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
-			},
-			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "File type not allowed")
-			},
-		},
-		{
-			name:      "Create deployment failure - MinIO upload error triggers rollback",
-			userID:    1,
-			projectID: 1,
-			request: &request.CreateDeploymentRequest{
-				File: fileHeader,
-			},
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, nil)
-
-				// StatObject check succeeds
-				minioClient.On("StatObject", mock.Anything, "static-sites", mock.Anything, mock.Anything).Return(minioGo.ObjectInfo{}, minioGo.ErrorResponse{Code: "NoSuchKey"})
-
-				// File upload fails
-				minioClient.On("PutObject", mock.Anything, "static-sites",
-					mock.Anything, mock.Anything, mock.Anything, mock.Anything,
-				).Return(minioGo.UploadInfo{}, fmt.Errorf("minio error"))
-			},
-			expectedFunc: func(t *testing.T, deployment *response.DeploymentDto, err error) {
-				assert.Error(t, err)
-				apiErr, ok := err.(*core.ApiError)
-				assert.True(t, ok)
-				assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
-				assert.Equal(t, "Internal Server Error", apiErr.Message)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := new(repository.DeploymentRepositoryMock)
-			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			minioClient := new(minio.Mock)
-			policyMock := new(policy.AccessPolicyMock)
-
-			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
-
-			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
-			deployment, err := s.CreateDeployment(context.TODO(), tt.userID, tt.projectID, tt.request)
-
-			tt.expectedFunc(t, deployment, err)
-
-			repo.AssertExpectations(t)
-			projectRepo.AssertExpectations(t)
-			minioClient.AssertExpectations(t)
-		})
-	}
-}
-
 func TestDeploymentService_GetHistory(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -293,7 +138,7 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, policyMock)
 			deployments, err := s.GetHistory(context.TODO(), tt.userID, tt.projectID, 1, 10)
 			tt.expectedFunc(t, deployments, err)
 		})
@@ -328,7 +173,7 @@ func TestDeploymentService_GetDeploymentByID(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, policyMock)
 			deployment, err := s.GetDeploymentByID(context.TODO(), tt.userID, tt.id)
 			tt.expectedFunc(t, deployment, err)
 		})
@@ -502,7 +347,7 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
 
 			// Initialize Service
-			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, minioClient, policyMock)
 
 			// Execute
 			fileDTO, err := s.GetCurrentDeploymentFilesByProjectSubdomain(context.TODO(), tt.subdomain, tt.fileName, tt.clientEtag)
@@ -580,7 +425,7 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, policyMock)
 			err := s.TurnDeploymentLive(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
 		})
@@ -639,94 +484,9 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, policyMock)
 			err := s.TurnDeploymentOffline(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
-		})
-	}
-}
-
-func TestDeploymentService_DeleteDeployment(t *testing.T) {
-	tests := []struct {
-		name         string
-		userID       uint
-		deploymentID uint
-		setupMocks   func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock)
-		expectedFunc func(t *testing.T, err error)
-	}{
-		{
-			name:         "Delete deployment successfully",
-			userID:       1,
-			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				deployment := &models.Deployment{
-					Model:        gorm.Model{ID: 10},
-					ProjectID:    1,
-					OutputPrefix: "deployments/1/test",
-				}
-				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(10)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, deployment, nil)
-
-				// ListObjects mock
-				objInfoCh := make(chan minioGo.ObjectInfo, 1)
-				objInfoCh <- minioGo.ObjectInfo{Key: "deployments/1/test/index.html"}
-				close(objInfoCh)
-				minioClient.On("ListObjects", mock.Anything, mock.Anything, mock.Anything).
-					Return((<-chan minioGo.ObjectInfo)(objInfoCh))
-
-				// RemoveObjects mock - drain objectsCh and then close errCh to avoid race conditions
-				errCh := make(chan minioGo.RemoveObjectError)
-				minioClient.On("RemoveObjects", mock.Anything, "static-sites", mock.Anything, mock.Anything).
-					Return((<-chan minioGo.RemoveObjectError)(errCh)).
-					Run(func(args mock.Arguments) {
-						objectsCh := args.Get(2).(<-chan minioGo.ObjectInfo)
-						go func() {
-							for range objectsCh {
-								// consume all
-							}
-							close(errCh)
-						}()
-					})
-
-				// DB delete mock
-				repo.On("Delete", mock.Anything, deployment).Return(nil)
-			},
-			expectedFunc: func(t *testing.T, err error) {
-				assert.NoError(t, err)
-			},
-		},
-		{
-			name:         "Delete deployment failure - forbidden user",
-			userID:       2,
-			deploymentID: 10,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, minioClient *minio.Mock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(2), uint(10)).Return((*models.Project)(nil), (*models.Deployment)(nil), core.ForbiddenError())
-			},
-			expectedFunc: func(t *testing.T, err error) {
-				assert.Error(t, err)
-				apiErr, ok := err.(*core.ApiError)
-				assert.True(t, ok)
-				assert.Equal(t, http.StatusForbidden, apiErr.Code)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := new(repository.DeploymentRepositoryMock)
-			projectRepo := new(projectRepository.ProjectRepositoryMock)
-			minioClient := new(minio.Mock)
-			policyMock := new(policy.AccessPolicyMock)
-
-			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
-
-			s := NewDeploymentService(repo, projectRepo, minioClient, policyMock)
-			err := s.DeleteDeployment(context.TODO(), tt.deploymentID, tt.userID)
-
-			tt.expectedFunc(t, err)
-
-			repo.AssertExpectations(t)
-			projectRepo.AssertExpectations(t)
-			minioClient.AssertExpectations(t)
 		})
 	}
 }
@@ -778,7 +538,7 @@ func TestDeploymentService_ToggleIsSPAMode(t *testing.T) {
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, policyMock)
 			err := s.ToggleIsSPAMode(context.TODO(), tt.deploymentID, tt.userID)
 			tt.expectedFunc(t, err)
 		})

@@ -5,7 +5,6 @@ import (
 
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
-	"gorm.io/gorm"
 )
 
 type IDeploymentRepository interface {
@@ -16,9 +15,6 @@ type IDeploymentRepository interface {
 	Create(ctx context.Context, deployment *models.Deployment) error
 	Update(ctx context.Context, deployment *models.Deployment) error
 	Delete(ctx context.Context, deployment *models.Deployment) error
-	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
-	WithTx(tx *gorm.DB) IDeploymentRepository
-	ClaimNextQueued(ctx context.Context) (*models.Deployment, error)
 	MarkFailed(ctx context.Context, id uint, error string) error
 	MarkReady(ctx context.Context, id uint) error
 }
