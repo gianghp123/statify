@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime"
 	"path/filepath"
+	"strings"
 
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -58,7 +59,6 @@ func (s *FileProcessor) ProcessDeploymentFiles(ctx context.Context, deployment *
 
 		err = s.uploadFileToMinio(ctx, bucketName, deployment.OutputPrefix, file)
 		if err != nil {
-			// MINIO FAILURE: Trigger Rollback
 			log.Printf("Upload failed for %s: %v. Rolling back...", file.Name, err)
 			s.rollbackMinioUploads(ctx, bucketName, uploadedObjects)
 			return err
@@ -85,8 +85,6 @@ func (s *FileProcessor) uploadFileToMinio(ctx context.Context, bucketName string
 		contentType = "application/octet-stream"
 	}
 
-	// Use LimitReader to enforce the uncompressed size validated earlier
-	// This prevents the file from reading more bytes than the header claimed
 	limitReader := io.LimitReader(rc, int64(zf.UncompressedSize64))
 
 	objectName := fmt.Sprintf("%s/%s", prefix, zf.Name)
@@ -98,13 +96,8 @@ func (s *FileProcessor) uploadFileToMinio(ctx context.Context, bucketName string
 	return err
 }
 
-// ---------------------------------------------------------
 // Helper: Rollback (Compensating Transaction)
-// ---------------------------------------------------------
 func (s *FileProcessor) rollbackMinioUploads(ctx context.Context, bucketName string, objects []string) {
-	// Execute deletion in a background goroutine or immediately.
-	// For critical consistency, doing it immediately is safer, though it adds latency to the error response.
-
 	// Create a channel for objects to delete (MinIO optimized batch deletion)
 	objectsCh := make(chan minioGo.ObjectInfo)
 
@@ -120,4 +113,38 @@ func (s *FileProcessor) rollbackMinioUploads(ctx context.Context, bucketName str
 	for err := range errorCh {
 		log.Printf("CRITICAL: Failed to delete object during rollback: %s, Error: %v", err.ObjectName, err.Err)
 	}
+}
+
+func (s *FileProcessor) DeleteMinioFolder(ctx context.Context, bucketName string, prefix string) error {
+	if prefix == "" || prefix == "/" {
+		return fmt.Errorf("refusing to delete unsafe prefix: %s", prefix)
+	}
+	objectsCh := make(chan minioGo.ObjectInfo)
+
+	go func() {
+		defer close(objectsCh)
+		for object := range s.minioClient.ListObjects(ctx, bucketName, minioGo.ListObjectsOptions{
+			Prefix:    prefix,
+			Recursive: true,
+		}) {
+			if object.Err != nil {
+				log.Printf("Error listing object for deletion: %v", object.Err)
+				continue
+			}
+			objectsCh <- object
+		}
+	}()
+
+	errorCh := s.minioClient.RemoveObjects(ctx, bucketName, objectsCh, minioGo.RemoveObjectsOptions{})
+
+	var deleteErrors []string
+	for err := range errorCh {
+		deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", err.ObjectName, err.Err))
+	}
+
+	if len(deleteErrors) > 0 {
+		return fmt.Errorf("failed to delete some objects: %s", strings.Join(deleteErrors, ", "))
+	}
+
+	return nil
 }

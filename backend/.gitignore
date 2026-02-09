@@ -3,3 +3,4 @@ vendor
 .air.toml
 tmp
 builds
+.review

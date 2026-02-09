@@ -343,9 +343,6 @@ func (s *DeploymentService) ToggleIsSPAMode(ctx context.Context, deploymentID ui
 }
 
 func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID uint, userID uint) error {
-	// 1. Fetch deployment and verify ownership
-	// We need the OutputPrefix from the DB before we delete the record
-	// Security: Ensure the user owns the project this deployment belongs to
 	_, deployment, err := s.policy.CheckDeploymentAccess(ctx, userID, deploymentID)
 	if err != nil {
 		return err
@@ -355,64 +352,9 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 		return core.BadRequestError("Deployment is currently live, please turn it offline first")
 	}
 
-	// 2. Perform Physical Deletion (MinIO)
-	// We do this first or in a way that ensures we don't lose the Prefix string
-	log.Printf("Hard deleting deployment %d from storage at prefix: %s", deploymentID, deployment.OutputPrefix)
-
-	err = s.deleteMinioFolder(ctx, deployment.OutputPrefix)
-	if err != nil {
-		// We log the error but might choose to continue to DB deletion
-		// depending on how "stuck" you want the UI to get.
-		log.Printf("Warning: MinIO cleanup failed for %s: %v", deployment.OutputPrefix, err)
-	}
-
-	// 3. Perform Logical Deletion (Database)
-	// Hard delete the record from the DB
-	if err := s.repo.Delete(ctx, deployment); err != nil {
+	deployment.Status = enums.DeploymentStatusPendingDelete
+	if err := s.repo.Update(ctx, deployment); err != nil {
 		return core.ParseDatabaseError(err)
-	}
-
-	return nil
-}
-
-// Internal helper to handle the MinIO prefix deletion
-func (s *DeploymentService) deleteMinioFolder(ctx context.Context, prefix string) error {
-	bucketName := "static-sites"
-
-	// Guard: Never allow empty prefix deletion
-	if prefix == "" || prefix == "/" {
-		return fmt.Errorf("refusing to delete unsafe prefix: %s", prefix)
-	}
-
-	// 1. List all objects with the prefix
-	objectsCh := make(chan minioGo.ObjectInfo)
-
-	go func() {
-		defer close(objectsCh)
-		// Recursive: true ensures we get files in subfolders like /css/*
-		for object := range s.minioClient.ListObjects(ctx, bucketName, minioGo.ListObjectsOptions{
-			Prefix:    prefix,
-			Recursive: true,
-		}) {
-			if object.Err != nil {
-				log.Printf("Error listing object for deletion: %v", object.Err)
-				continue
-			}
-			objectsCh <- object
-		}
-	}()
-
-	// 2. Batch Delete
-	errorCh := s.minioClient.RemoveObjects(ctx, bucketName, objectsCh, minioGo.RemoveObjectsOptions{})
-
-	// 3. Collect errors
-	var deleteErrors []string
-	for err := range errorCh {
-		deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", err.ObjectName, err.Err))
-	}
-
-	if len(deleteErrors) > 0 {
-		return fmt.Errorf("failed to delete some objects: %s", strings.Join(deleteErrors, ", "))
 	}
 
 	return nil
