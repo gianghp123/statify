@@ -3,6 +3,7 @@ package minio
 import (
 	"context"
 	"io"
+	"net/url"
 
 	minioGo "github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/mock"
@@ -18,6 +19,11 @@ func (m *Mock) PutObject(ctx context.Context, bucketName, objectName string, rea
 		return minioGo.UploadInfo{}, args.Error(1)
 	}
 	return args.Get(0).(minioGo.UploadInfo), args.Error(1)
+}
+
+func (m *Mock) PresignedPostPolicy(ctx context.Context, post *minioGo.PostPolicy) (*url.URL, map[string]string, error) {
+	args := m.Called(ctx, post)
+	return args.Get(0).(*url.URL), args.Get(1).(map[string]string), args.Error(2)
 }
 
 func (m *Mock) GetObject(ctx context.Context, bucketName, objectName string, opts minioGo.GetObjectOptions) (*minioGo.Object, error) {

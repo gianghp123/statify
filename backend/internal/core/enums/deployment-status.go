@@ -13,7 +13,7 @@ const (
 	DeploymentStatusReady         DeploymentStatus = "READY"
 	DeploymentStatusProcessing    DeploymentStatus = "PROCESSING"
 	DeploymentStatusLive          DeploymentStatus = "LIVE"
-	DeploymentStatusPendingDelete DeploymentStatus = "PENDING_DELETE"
+	DeploymentStatusWaitingUpload DeploymentStatus = "WAITING_UPLOAD"
 )
 
 func (p *DeploymentStatus) Scan(value interface{}) error {

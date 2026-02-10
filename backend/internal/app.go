@@ -22,6 +22,7 @@ import (
 	projectModule "github.com/gianghp/statify/internal/modules/project"
 	projectRepository "github.com/gianghp/statify/internal/modules/project/repository"
 	projectService "github.com/gianghp/statify/internal/modules/project/service"
+	uploadSessionRepository "github.com/gianghp/statify/internal/modules/upload-session/repository"
 	userModule "github.com/gianghp/statify/internal/modules/user"
 	userRepository "github.com/gianghp/statify/internal/modules/user/repository"
 	userService "github.com/gianghp/statify/internal/modules/user/service"
@@ -55,6 +56,7 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	projectRepo := projectRepository.NewProjectRepository(db)
 	deploymentRepo := deploymentRepository.NewDeploymentRepository(db)
 	jobQueueRepo := jobQueueRepository.NewJobQueueRepository(db)
+	uploadSessionRepo := uploadSessionRepository.NewUploadSessionRepository(db)
 
 	// Services
 	bcryptUtils := bcrypt.NewBcryptUtils()
@@ -76,7 +78,7 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
 	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper, accessPolicy)
-	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, jobQueueRepo, minioClientWrapper, accessPolicy)
+	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, jobQueueRepo, uploadSessionRepo, minioClientWrapper, accessPolicy)
 	userSvc := userService.NewUserService(userRepo)
 	analyticsSvc := analyticsService.NewAnalyticsService(metricsRepo)
 

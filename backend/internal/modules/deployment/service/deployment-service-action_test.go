@@ -49,7 +49,7 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 			minioClient := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
 			test.setupMocks(repo, projectRepo, jobQueueRepo, minioClient, policyMock)
-			s := NewDeploymentService(repo, projectRepo, jobQueueRepo, minioClient, policyMock)
+			s := NewDeploymentService(repo, projectRepo, jobQueueRepo, nil, minioClient, policyMock)
 			err := s.DeleteDeployment(context.TODO(), uint(1), uint(1))
 			test.expectedFunc(t, err)
 			repo.AssertExpectations(t)

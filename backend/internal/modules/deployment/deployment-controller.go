@@ -10,7 +10,6 @@ import (
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/modules/analytics/wrapper"
-	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -66,7 +65,7 @@ func (c *DeploymentController) GetHistory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, core.NewPaginatedApiResponse(http.StatusOK, "Deployment history retrieved successfully", deployments.Entities, &deployments.Pagination))
 }
 
-func (c *DeploymentController) CreateDeployment(ctx *gin.Context) {
+func (c *DeploymentController) CreateUploadSession(ctx *gin.Context) {
 	userID, err := utils.GetUserIDFromContext(ctx)
 	if err != nil {
 		core.HandleApiError(ctx, core.UnauthorizedError())
@@ -80,19 +79,14 @@ func (c *DeploymentController) CreateDeployment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.CreateDeploymentRequest
-	if err := ctx.ShouldBind(&req); err != nil {
-		core.HandleApiError(ctx, core.BadRequestError(err.Error()))
-		return
-	}
+	uploadSessionDto, err := c.service.CreatePresignedUrl(ctx, userID, uint(projectID))
 
-	deploymentDto, err := c.service.CreateDeployment(ctx, userID, uint(projectID), &req)
 	if err != nil {
 		core.HandleApiError(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, core.NewApiResponse(http.StatusCreated, "Deployment created successfully", deploymentDto))
+	ctx.JSON(http.StatusCreated, core.NewApiResponse(http.StatusCreated, "Upload session created successfully", uploadSessionDto))
 }
 
 func (c *DeploymentController) GetStatus(ctx *gin.Context) {

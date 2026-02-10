@@ -3,6 +3,7 @@ package minio
 import (
 	"context"
 	"io"
+	"net/url"
 
 	minioGo "github.com/minio/minio-go/v7"
 )
@@ -21,6 +22,10 @@ func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, r
 
 func (c *Client) GetObject(ctx context.Context, bucketName, objectName string, opts minioGo.GetObjectOptions) (*minioGo.Object, error) {
 	return c.client.GetObject(ctx, bucketName, objectName, opts)
+}
+
+func (c *Client) PresignedPostPolicy(ctx context.Context, post *minioGo.PostPolicy) (*url.URL, map[string]string, error) {
+	return c.client.PresignedPostPolicy(ctx, post)
 }
 
 func (c *Client) StatObject(ctx context.Context, bucketName, objectName string, opts minioGo.StatObjectOptions) (minioGo.ObjectInfo, error) {

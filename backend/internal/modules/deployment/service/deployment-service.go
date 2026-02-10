@@ -1,10 +1,8 @@
 package service
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,27 +12,29 @@ import (
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
-	"github.com/gianghp/statify/internal/modules/deployment/dtos/request"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
+	uploadSessionRepo "github.com/gianghp/statify/internal/modules/upload-session/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
+	"github.com/google/uuid"
 	minioGo "github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
 )
 
 type DeploymentService struct {
-	repo         repository.IDeploymentRepository
-	projectRepo  projectRepo.IProjectRepository
-	jobQueueRepo jobQueueRepo.IJobQueueRepository
-	minioClient  minio.Interface
-	policy       policy.IAccessPolicy
+	repo              repository.IDeploymentRepository
+	projectRepo       projectRepo.IProjectRepository
+	jobQueueRepo      jobQueueRepo.IJobQueueRepository
+	uploadSessionRepo uploadSessionRepo.IUploadSessionRepository
+	minioClient       minio.Interface
+	policy            policy.IAccessPolicy
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
-	return &DeploymentService{repo: repo, projectRepo: projectRepo, jobQueueRepo: jobQueueRepo, minioClient: minioClient, policy: policy}
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, uploadSessionRepo uploadSessionRepo.IUploadSessionRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
+	return &DeploymentService{repo: repo, projectRepo: projectRepo, jobQueueRepo: jobQueueRepo, uploadSessionRepo: uploadSessionRepo, minioClient: minioClient, policy: policy}
 }
 
 func (s *DeploymentService) GetGlobalDeploymentHistory(ctx context.Context, userId uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
@@ -100,74 +100,62 @@ func (s *DeploymentService) GetDeploymentByID(ctx context.Context, userID uint, 
 	return deploymentDto, nil
 }
 
-func (s *DeploymentService) CreateDeployment(ctx context.Context, userID uint, projectID uint, req *request.CreateDeploymentRequest) (*response.DeploymentDto, error) {
-	// 1. Authorization & Validation
+func (s *DeploymentService) CreatePresignedUrl(ctx context.Context, userID uint, projectID uint) (*response.UploadSessionDto, error) {
+	// 1. Authorization
 	_, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Zip Safety Analysis (Prevent Disk Fill / Zip Bomb)
-	multipartFile, err := req.File.Open()
-	if err != nil {
-		return nil, core.BadRequestError("Could not open uploaded file")
-	}
-	defer multipartFile.Close()
+	uploadSession, err := s.uploadSessionRepo.FindUnexpiredByProjectID(ctx, projectID)
 
-	zipReader, err := zip.NewReader(multipartFile, req.File.Size)
-	if err != nil {
-		return nil, core.BadRequestError("Invalid zip file")
+	if uploadSession != nil {
+		return utils.EntityToDto[*response.UploadSessionDto](uploadSession)
 	}
 
-	// Security Check: Validate size, count, and paths before processing
-	if err := utils.ValidateZipArchive(zipReader.File); err != nil {
-		return nil, core.BadRequestError(err.Error())
+	// 2. Prepare Paths
+	id := uuid.NewString()
+	outputPrefix := fmt.Sprintf("deployments/%d/%s", projectID, id)
+	uploadKey := fmt.Sprintf("%s/source.zip", outputPrefix)
+	expired := time.Now().UTC().Add(15 * time.Minute)
+
+	// 3. Create MinIO Presigned Policy
+	policy := minioGo.NewPostPolicy()
+	if err := policy.SetBucket("static-sites"); err != nil {
+		return nil, core.InternalError()
+	}
+	if err := policy.SetKey(uploadKey); err != nil {
+		return nil, core.InternalError()
+	}
+	if err := policy.SetExpires(expired); err != nil {
+		return nil, core.InternalError()
 	}
 
-	// Index html must at root
-	if err := utils.ValidateEntrypoint(zipReader.File); err != nil {
-		return nil, core.BadRequestError(err.Error())
+	if err := policy.SetContentType("application/zip"); err != nil {
+		return nil, core.InternalError()
+	}
+	if err := policy.SetContentLengthRange(1024, 100*1024*1024); err != nil {
+		return nil, core.InternalError()
 	}
 
-	// 2. Content Checks (Static files only)
-	if err := utils.ValidateStaticFileTypes(zipReader.File); err != nil {
-		return nil, core.BadRequestError(err.Error())
-	}
-
-	// 3. Upload to MinIO (With Rollback Tracking)
-	// Generate a unique path upfront (e.g., deployments/1/20260112-1530-nano)
-	timestamp := time.Now().Format("20060102-150405")
-	uniqueSuffix := time.Now().UnixNano()
-	outputPrefix := fmt.Sprintf("deployments/%d/%s-%d", projectID, timestamp, uniqueSuffix)
-
-	objectName := fmt.Sprintf("%s/temp", outputPrefix)
-
-	_, err = s.minioClient.StatObject(ctx, "static-sites", objectName, minioGo.StatObjectOptions{})
-	if err == nil {
-		return nil, core.BadRequestError("Deployment already exists")
-	}
-
-	_, err = s.minioClient.PutObject(ctx, "static-sites", objectName, multipartFile, req.File.Size, minioGo.PutObjectOptions{
-		ContentType: "application/zip",
-	})
-
+	url, _, err := s.minioClient.PresignedPostPolicy(ctx, policy)
 	if err != nil {
 		return nil, core.InternalError()
 	}
 
-	deployment := &models.Deployment{
-		ProjectID:    projectID,
-		Status:       enums.DeploymentStatusQueued,
+	newUploadSession := models.DeploymentUploadSession{
+		Status:       enums.UploadStatusWaiting,
+		UploadKey:    uploadKey,
 		OutputPrefix: outputPrefix,
+		PresignedUrl: url.String(),
+		ExpiredAt:    expired,
 	}
 
-	err = s.repo.Create(ctx, deployment)
-	if err != nil {
-		return nil, core.InternalError()
+	if err := s.uploadSessionRepo.Create(ctx, &newUploadSession); err != nil {
+		return nil, core.ParseDatabaseError(err)
 	}
 
-	log.Printf("Deployment %d created successfully", deployment.ID)
-	return utils.EntityToDto[*response.DeploymentDto](deployment)
+	return utils.EntityToDto[*response.UploadSessionDto](&newUploadSession)
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {
