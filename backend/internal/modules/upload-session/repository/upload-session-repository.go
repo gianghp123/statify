@@ -20,6 +20,14 @@ func (r *UploadSessionRepository) Create(ctx context.Context, uploadSession *mod
 	return r.db.WithContext(ctx).Create(uploadSession).Error
 }
 
+func (r *UploadSessionRepository) FindByID(ctx context.Context, id uint) (*models.DeploymentUploadSession, error) {
+	var uploadSession models.DeploymentUploadSession
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&uploadSession).Error; err != nil {
+		return nil, err
+	}
+	return &uploadSession, nil
+}
+
 func (r *UploadSessionRepository) FindUnexpiredByProjectID(ctx context.Context, projectID uint) (*models.DeploymentUploadSession, error) {
 	var uploadSession models.DeploymentUploadSession
 	if err := r.db.WithContext(ctx).Where("project_id = ? AND expires_at > ?", projectID, (time.Now().UTC().Add(time.Minute * 2))).First(&uploadSession).Error; err != nil {

@@ -16,6 +16,11 @@ func (m *UploadSessionRepositoryMock) Create(ctx context.Context, uploadSession 
 	return args.Error(0)
 }
 
+func (m *UploadSessionRepositoryMock) FindByID(ctx context.Context, id uint) (*models.DeploymentUploadSession, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(*models.DeploymentUploadSession), args.Error(1)
+}
+
 func (m *UploadSessionRepositoryMock) FindUnexpiredByProjectID(ctx context.Context, projectID uint) (*models.DeploymentUploadSession, error) {
 	args := m.Called(ctx, projectID)
 	return args.Get(0).(*models.DeploymentUploadSession), args.Error(1)

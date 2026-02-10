@@ -144,7 +144,6 @@ func (s *DeploymentService) CreatePresignedUrl(ctx context.Context, userID uint,
 	}
 
 	newUploadSession := models.DeploymentUploadSession{
-		Status:       enums.UploadStatusWaiting,
 		UploadKey:    uploadKey,
 		OutputPrefix: outputPrefix,
 		PresignedUrl: url.String(),
@@ -156,6 +155,31 @@ func (s *DeploymentService) CreatePresignedUrl(ctx context.Context, userID uint,
 	}
 
 	return utils.EntityToDto[*response.UploadSessionDto](&newUploadSession)
+}
+
+func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadSessionID uint) (*response.DeploymentDto, error) {
+	uploadSession, err := s.uploadSessionRepo.FindByID(ctx, uploadSessionID)
+
+	if err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	_, err = s.minioClient.StatObject(ctx, utils.GetEnv("MINIO_BUCKET", "static-sites"), uploadSession.UploadKey, minioGo.StatObjectOptions{})
+	if err != nil {
+		return nil, core.ParseMinioError(err)
+	}
+
+	deployment := models.Deployment{
+		ProjectID:    uploadSession.ProjectID,
+		Status:       enums.DeploymentStatusQueued,
+		OutputPrefix: uploadSession.OutputPrefix,
+	}
+
+	if err := s.repo.Create(ctx, &deployment); err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
+	return utils.EntityToDto[*response.DeploymentDto](&deployment)
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {

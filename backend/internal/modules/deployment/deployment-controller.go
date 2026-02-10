@@ -89,6 +89,23 @@ func (c *DeploymentController) CreateUploadSession(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, core.NewApiResponse(http.StatusCreated, "Upload session created successfully", uploadSessionDto))
 }
 
+func (c *DeploymentController) ConfirmCreateDeployment(ctx *gin.Context) {
+	uploadSessionIDStr := ctx.Param("upload_session_id")
+	uploadSessionID, err := strconv.ParseUint(uploadSessionIDStr, 10, 32)
+	if err != nil {
+		core.HandleApiError(ctx, core.BadRequestError("Invalid upload session ID"))
+		return
+	}
+
+	deploymentDto, err := c.service.ConfirmCreateDeployment(ctx, uint(uploadSessionID))
+	if err != nil {
+		core.HandleApiError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, core.NewApiResponse(http.StatusOK, "Deployment confirmed successfully", deploymentDto))
+}
+
 func (c *DeploymentController) GetStatus(ctx *gin.Context) {
 	userID, err := utils.GetUserIDFromContext(ctx)
 	if err != nil {
