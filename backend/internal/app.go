@@ -27,6 +27,7 @@ import (
 	userRepository "github.com/gianghp/statify/internal/modules/user/repository"
 	userService "github.com/gianghp/statify/internal/modules/user/service"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
+	"github.com/gianghp/statify/internal/utils"
 	"github.com/gianghp/statify/internal/utils/bcrypt"
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
@@ -63,7 +64,10 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	jwtService := authService.NewJwtService()
 
 	//Create admin if not exist
-	if err := authService.CreateAdmin(userRepo, bcryptUtils); err != nil {
+	adminEmail := utils.GetEnv("ADMIN_EMAIL", "admin@admin.com")
+	adminPassword := utils.GetEnv("ADMIN_PASSWORD", "admin")
+	adminUsername := utils.GetEnv("ADMIN_USERNAME", "admin")
+	if err := authService.CreateAdmin(userRepo, bcryptUtils, adminEmail, adminPassword, adminUsername); err != nil {
 		log.Fatal(err)
 	}
 

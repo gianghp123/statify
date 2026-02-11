@@ -117,21 +117,21 @@ func (s *AuthService) Me(ctx context.Context, userID uint) (*userResponse.UserDt
 // 	// TODO: implement
 // }
 
-func CreateAdmin(userRepo repository.IUserRepository, bcrypt bcrypt.IBcryptUtils) error {
-	if _, err := userRepo.FindByEmail(context.TODO(), "admin@admin.com"); err == nil {
+func CreateAdmin(userRepo repository.IUserRepository, bcrypt bcrypt.IBcryptUtils, email, password, username string) error {
+	if _, err := userRepo.FindByEmail(context.TODO(), email); err == nil {
 		log.Println("Admin already exists")
 		return nil
 	}
 
-	passwordHash, err := bcrypt.HashPassword("admin")
+	passwordHash, err := bcrypt.HashPassword(password)
 	if err != nil {
 		return core.InternalError()
 	}
 
 	user := &models.User{
-		Email:        "admin@admin.com",
+		Email:        email,
 		PasswordHash: passwordHash,
-		Username:     "admin",
+		Username:     username,
 		Role:         string(enums.UserRoleAdmin),
 	}
 
