@@ -9,7 +9,7 @@ import (
 	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
-	"github.com/gianghp/statify/internal/modules/deployment/service"
+	"github.com/gianghp/statify/internal/modules/file/processor"
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	"github.com/gianghp/statify/internal/utils"
 )
@@ -17,10 +17,10 @@ import (
 type DeploymentWorker struct {
 	jobQueueRepository   jobQueueRepo.IJobQueueRepository
 	deploymentRepository repository.IDeploymentRepository
-	fileProcessor        *service.FileProcessor
+	fileProcessor        processor.IFileProcessor
 }
 
-func NewDeploymentWorker(jobQueueRepository jobQueueRepo.IJobQueueRepository, deploymentRepository repository.IDeploymentRepository, fileProcessor *service.FileProcessor) *DeploymentWorker {
+func NewDeploymentWorker(jobQueueRepository jobQueueRepo.IJobQueueRepository, deploymentRepository repository.IDeploymentRepository, fileProcessor processor.IFileProcessor) *DeploymentWorker {
 	return &DeploymentWorker{
 		jobQueueRepository:   jobQueueRepository,
 		deploymentRepository: deploymentRepository,

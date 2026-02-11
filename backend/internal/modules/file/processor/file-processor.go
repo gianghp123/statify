@@ -1,4 +1,4 @@
-package service
+package processor
 
 import (
 	"archive/zip"
