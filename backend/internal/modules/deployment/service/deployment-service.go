@@ -20,6 +20,7 @@ import (
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
 	minioGo "github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
 )
@@ -31,10 +32,20 @@ type DeploymentService struct {
 	uploadSessionRepo uploadSessionRepo.IUploadSessionRepository
 	minioClient       minio.Interface
 	policy            policy.IAccessPolicy
+	cache             *lru.Cache[string, *models.Deployment]
 }
 
 func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, uploadSessionRepo uploadSessionRepo.IUploadSessionRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
-	return &DeploymentService{repo: repo, projectRepo: projectRepo, jobQueueRepo: jobQueueRepo, uploadSessionRepo: uploadSessionRepo, minioClient: minioClient, policy: policy}
+	cache, _ := lru.New[string, *models.Deployment](10000)
+	return &DeploymentService{
+		repo:              repo,
+		projectRepo:       projectRepo,
+		jobQueueRepo:      jobQueueRepo,
+		uploadSessionRepo: uploadSessionRepo,
+		minioClient:       minioClient,
+		policy:            policy,
+		cache:             cache,
+	}
 }
 
 func (s *DeploymentService) GetGlobalDeploymentHistory(ctx context.Context, userId uint, page int, limit int) (coreRepo.PaginatedEntities[*response.DeploymentDto], error) {
@@ -193,18 +204,26 @@ func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadS
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {
-	project, err := s.projectRepo.FindBySubdomain(ctx, subdomain)
-	if err != nil || project == nil || project.CurrentDeploymentID == 0 {
-		return nil, core.NotFoundError()
-	}
+	var deployment *models.Deployment
 
-	deployment, err := s.repo.FindByID(ctx, project.CurrentDeploymentID)
-	if err != nil || deployment.Status != enums.DeploymentStatusLive {
-		return nil, core.NotFoundError()
-	}
+	if d, ok := s.cache.Get(subdomain); ok {
+		deployment = d
+	} else {
+		project, err := s.projectRepo.FindBySubdomain(ctx, subdomain)
+		if err != nil || project == nil || project.CurrentDeploymentID == 0 {
+			return nil, core.NotFoundError()
+		}
 
-	if deployment.OutputPrefix == "" {
-		deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d", deployment.ProjectID, deployment.ID)
+		deployment, err = s.repo.FindByID(ctx, project.CurrentDeploymentID)
+		if err != nil || deployment.Status != enums.DeploymentStatusLive {
+			return nil, core.NotFoundError()
+		}
+
+		if deployment.OutputPrefix == "" {
+			deployment.OutputPrefix = fmt.Sprintf("deployments/%d/%d", deployment.ProjectID, deployment.ID)
+		}
+
+		s.cache.Add(subdomain, deployment)
 	}
 
 	cleanFileName := strings.TrimPrefix(fileName, "/")
@@ -325,6 +344,8 @@ func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID
 		return core.ParseDatabaseError(err)
 	}
 
+	s.cache.Remove(project.Subdomain)
+
 	return nil
 }
 
@@ -349,6 +370,8 @@ func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymen
 		return core.ParseDatabaseError(err)
 	}
 
+	s.cache.Remove(project.Subdomain)
+
 	return nil
 }
 
@@ -362,6 +385,8 @@ func (s *DeploymentService) ToggleIsSPAMode(ctx context.Context, deploymentID ui
 	if err := s.repo.Update(ctx, deployment); err != nil {
 		return core.ParseDatabaseError(err)
 	}
+
+	s.cache.Remove(deployment.Project.Subdomain)
 
 	return nil
 }
@@ -379,6 +404,8 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 	if err := s.repo.Delete(ctx, deployment); err != nil {
 		return core.ParseDatabaseError(err)
 	}
+
+	s.cache.Remove(deployment.Project.Subdomain)
 
 	jobQueue := models.JobQueue{
 		Type:         enums.JobQueueTypeDeploymentDelete,

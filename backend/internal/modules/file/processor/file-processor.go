@@ -13,6 +13,7 @@ import (
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
+	"github.com/gianghp/statify/internal/utils"
 	minioGo "github.com/minio/minio-go/v7"
 )
 
@@ -49,6 +50,21 @@ func (s *FileProcessor) ProcessDeploymentFiles(ctx context.Context, deployment *
 
 	zipReader, err := zip.NewReader(object, stat.Size)
 	if err != nil {
+		return err
+	}
+
+	// Validate zip archive
+	if err := utils.ValidateZipArchive(zipReader.File); err != nil {
+		return err
+	}
+
+	// Validate file types
+	if err := utils.ValidateStaticFileTypes(zipReader.File); err != nil {
+		return err
+	}
+
+	// Validate entrypoint
+	if err := utils.ValidateEntrypoint(zipReader.File); err != nil {
 		return err
 	}
 
