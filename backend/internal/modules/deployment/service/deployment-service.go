@@ -179,6 +179,16 @@ func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadS
 		return nil, core.ParseDatabaseError(err)
 	}
 
+	jobQueue := models.JobQueue{
+		Type:         enums.JobQueueTypeDeploymentProcess,
+		DeploymentID: deployment.ID,
+		Status:       enums.JobQueueStatusPending,
+	}
+
+	if err := s.jobQueueRepo.Create(ctx, &jobQueue); err != nil {
+		return nil, core.ParseDatabaseError(err)
+	}
+
 	return utils.EntityToDto[*response.DeploymentDto](&deployment)
 }
 
