@@ -10,6 +10,7 @@ import (
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
 	deploymentRepo "github.com/gianghp/statify/internal/modules/deployment/repository"
+	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	"github.com/gianghp/statify/internal/modules/project/dtos/request"
 	"github.com/gianghp/statify/internal/modules/project/dtos/response"
 	"github.com/gianghp/statify/internal/modules/project/repository"
@@ -20,12 +21,13 @@ import (
 type ProjectService struct {
 	repo           repository.IProjectRepository
 	deploymentRepo deploymentRepo.IDeploymentRepository
+	jobQueueRepo   jobQueueRepo.IJobQueueRepository
 	minioClient    minio.Interface
 	policy         policy.IAccessPolicy
 }
 
-func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *ProjectService {
-	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, minioClient: minioClient, policy: policy}
+func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *ProjectService {
+	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, jobQueueRepo: jobQueueRepo, minioClient: minioClient, policy: policy}
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *request.CreateProjectRequest) (*response.ProjectDto, error) {
@@ -126,5 +128,28 @@ func (s *ProjectService) UpdateProject(ctx context.Context, userID uint, id uint
 }
 
 func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, userID uint) error {
+	project, err := s.policy.CheckProjectAccess(ctx, userID, projectID)
+	if err != nil {
+		return err
+	}
+
+	if project.CurrentDeploymentID != 0 {
+		return core.BadRequestError("Project is currently live, please turn it offline first")
+	}
+
+	if err := s.repo.Delete(ctx, project); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
+	jobQueue := &models.JobQueue{
+		Type:    enums.JobQueueTypeProjectDelete,
+		Payload: fmt.Sprintf("%d", projectID),
+		Status:  enums.JobQueueStatusPending,
+	}
+
+	if err := s.jobQueueRepo.Create(ctx, jobQueue); err != nil {
+		return core.ParseDatabaseError(err)
+	}
+
 	return nil
 }

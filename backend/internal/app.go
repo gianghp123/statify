@@ -77,7 +77,7 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
-	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, minioClientWrapper, accessPolicy)
+	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, jobQueueRepo, minioClientWrapper, accessPolicy)
 	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, jobQueueRepo, uploadSessionRepo, minioClientWrapper, accessPolicy)
 	userSvc := userService.NewUserService(userRepo)
 	analyticsSvc := analyticsService.NewAnalyticsService(metricsRepo)

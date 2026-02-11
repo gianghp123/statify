@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"log"
@@ -28,13 +29,17 @@ func NewDeploymentWorker(jobQueueRepository jobQueueRepo.IJobQueueRepository, de
 	}
 }
 
-func (w *DeploymentWorker) Run(ctx context.Context, maxProcessGoroutines int, maxDeleteGoroutines int, sleepTime time.Duration, maxRetry int) {
+func (w *DeploymentWorker) Run(ctx context.Context, maxProcessGoroutines int, maxDeleteGoroutines int, maxProjectDeleteGoroutines int, sleepTime time.Duration, maxRetry int) {
 	for range maxDeleteGoroutines {
 		go w.workerLoop(ctx, enums.JobQueueTypeDeploymentDelete, sleepTime, maxRetry)
 	}
 
 	for range maxProcessGoroutines {
 		go w.workerLoop(ctx, enums.JobQueueTypeDeploymentProcess, sleepTime, maxRetry)
+	}
+
+	for range maxProjectDeleteGoroutines {
+		go w.workerLoop(ctx, enums.JobQueueTypeProjectDelete, sleepTime, maxRetry)
 	}
 
 	<-ctx.Done()
@@ -65,6 +70,9 @@ func (w *DeploymentWorker) workerLoop(ctx context.Context, jobType enums.JobQueu
 
 		case enums.JobQueueTypeDeploymentDelete:
 			w.processDelete(ctx, job, sleep, maxRetry)
+
+		case enums.JobQueueTypeProjectDelete:
+			w.processProjectDelete(ctx, job, sleep, maxRetry)
 
 		default:
 			log.Printf("unknown job type: %v", job.Type)
@@ -119,6 +127,52 @@ func (w *DeploymentWorker) processDelete(ctx context.Context, job *models.JobQue
 		}
 
 		deleteErr = w.fileProcessor.DeleteMinioFolder(ctx, deployment.OutputPrefix)
+
+		if deleteErr == nil {
+			break
+		}
+
+		job.RetryCount++
+		time.Sleep(sleepTime)
+	}
+
+	if deleteErr != nil {
+		job.Status = enums.JobQueueStatusFailed
+		job.Error = deleteErr.Error()
+	} else {
+		job.Status = enums.JobQueueStatusSuccess
+	}
+
+	updateErr := utils.Retry(maxRetry, sleepTime, func() error {
+		return w.jobQueueRepository.Update(ctx, job)
+	})
+
+	if updateErr != nil {
+		log.Printf("failed to update job: %v", updateErr)
+	}
+}
+func (w *DeploymentWorker) processProjectDelete(ctx context.Context, job *models.JobQueue, sleepTime time.Duration, maxRetry int) {
+	defer func() {
+		if r := recover(); r != nil {
+			job.Status = enums.JobQueueStatusFailed
+			job.Error = "panic during project delete"
+			_ = w.jobQueueRepository.Update(ctx, job)
+		}
+	}()
+
+	// Payload is projectID
+	prefix := fmt.Sprintf("deployments/%s", job.Payload)
+
+	var deleteErr error
+
+	for range maxRetry {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		deleteErr = w.fileProcessor.DeleteMinioFolder(ctx, prefix)
 
 		if deleteErr == nil {
 			break

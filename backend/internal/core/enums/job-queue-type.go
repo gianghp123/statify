@@ -10,6 +10,7 @@ type JobQueueType string
 const (
 	JobQueueTypeDeploymentDelete  JobQueueType = "deployment_delete"
 	JobQueueTypeDeploymentProcess JobQueueType = "deployment_process"
+	JobQueueTypeProjectDelete     JobQueueType = "project_delete"
 )
 
 func (p *JobQueueType) Scan(value interface{}) error {

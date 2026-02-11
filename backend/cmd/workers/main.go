@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/gianghp/statify/internal/configs"
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
-	"github.com/gianghp/statify/internal/modules/deployment/service"
 	"github.com/gianghp/statify/internal/modules/deployment/workers"
+	"github.com/gianghp/statify/internal/modules/file/processor"
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
@@ -51,10 +50,10 @@ func main() {
 
 	deploymentRepository := repository.NewDeploymentRepository(db)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
-	fileProcessor := service.NewFileProcessor(minioClientWrapper, deploymentRepository, utils.GetEnv("MINIO_BUCKET", "statify"))
+	fileProcessor := processor.NewFileProcessor(minioClientWrapper, deploymentRepository, utils.GetEnv("MINIO_BUCKET", "statify"))
 	jobQueueRepository := jobQueueRepo.NewJobQueueRepository(db)
 	deploymentWorker := workers.NewDeploymentWorker(jobQueueRepository, deploymentRepository, fileProcessor)
 
-	deploymentWorker.Run(context.Background(), core.MaxProcessGoroutines, core.MaxDeleteGoroutines, 2*time.Second, 5)
+	deploymentWorker.Run(context.Background(), core.MaxProcessGoroutines, core.MaxDeleteGoroutines, core.MaxProjectDeleteGoroutines, core.SleepTime, core.MaxRetry)
 
 }
