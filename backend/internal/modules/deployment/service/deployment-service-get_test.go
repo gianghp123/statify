@@ -1,15 +1,13 @@
 package service
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"mime/multipart"
 	"net/http"
 	"testing"
 
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
@@ -64,8 +62,9 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			test.SetupMocks(t, repo, policyMock)
-			deploymentService := NewDeploymentService(repo, nil, nil, nil, nil, policyMock)
+			deploymentService := NewDeploymentService(repo, nil, nil, nil, nil, policyMock, tmMock)
 			deployments, err := deploymentService.GetGlobalDeploymentHistory(context.Background(), test.userID, test.page, test.limit)
 			test.expectedFunc(t, deployments, err)
 			repo.AssertExpectations(t)
@@ -73,38 +72,6 @@ func TestDeploymentService_GetGlobalDeploymentHistory(t *testing.T) {
 		})
 	}
 }
-
-func createMockMultipartFileHeader(t *testing.T, filenames []string) (*multipart.FileHeader, []byte) {
-	// 1. Create a ZIP in memory
-	zipBuf := new(bytes.Buffer)
-	zw := zip.NewWriter(zipBuf)
-	for _, name := range filenames {
-		f, _ := zw.Create(name)
-		f.Write([]byte("dummy content for " + name))
-	}
-	zw.Close()
-	zipBytes := zipBuf.Bytes()
-
-	// 2. Create a Multipart Form in memory to get a *multipart.FileHeader
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", "test.zip")
-	if err != nil {
-		t.Fatal(err)
-	}
-	part.Write(zipBytes)
-	writer.Close()
-
-	// 3. Parse it back to extract the FileHeader
-	reader := multipart.NewReader(body, writer.Boundary())
-	form, err := reader.ReadForm(1 << 20) // 1MB limit
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return form.File["file"][0], zipBytes
-}
-
 func TestDeploymentService_GetHistory(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -136,8 +103,9 @@ func TestDeploymentService_GetHistory(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, nil, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, nil, policyMock, tmMock)
 			deployments, err := s.GetHistory(context.TODO(), tt.userID, tt.projectID, 1, 10)
 			tt.expectedFunc(t, deployments, err)
 		})
@@ -171,8 +139,9 @@ func TestDeploymentService_GetDeploymentByID(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			tt.setupMocks(repo, projectRepo, policyMock)
-			s := NewDeploymentService(repo, projectRepo, nil, nil, nil, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, nil, policyMock, tmMock)
 			deployment, err := s.GetDeploymentByID(context.TODO(), tt.userID, tt.id)
 			tt.expectedFunc(t, deployment, err)
 		})
@@ -341,12 +310,13 @@ func TestDeploymentService_GetCurrentDeploymentFilesByProjectSubdomain(t *testin
 			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			minioClient := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 
 			// Setup expectations
 			tt.setupMocks(repo, projectRepo, minioClient, policyMock)
 
 			// Initialize Service
-			s := NewDeploymentService(repo, projectRepo, nil, nil, minioClient, policyMock)
+			s := NewDeploymentService(repo, projectRepo, nil, nil, minioClient, policyMock, tmMock)
 
 			// Execute
 			fileDTO, err := s.GetCurrentDeploymentFilesByProjectSubdomain(context.TODO(), tt.subdomain, tt.fileName, tt.clientEtag)

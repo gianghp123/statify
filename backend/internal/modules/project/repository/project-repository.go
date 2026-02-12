@@ -85,7 +85,6 @@ func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, pa
 	result.Pagination.TotalCount = totalCount
 
 	// 5. Retrieve Data
-	// Now we fetch the actual entities with Preload
 	if err := db.Preload("Deployments").
 		Distinct("projects.*").
 		Order("projects.created_at DESC").
@@ -108,4 +107,11 @@ func (r *ProjectRepository) Update(ctx context.Context, project *models.Project)
 
 func (r *ProjectRepository) Delete(ctx context.Context, project *models.Project) error {
 	return r.db.WithContext(ctx).Delete(project).Error
+}
+
+func (r *ProjectRepository) WithTx(tx *gorm.DB) IProjectRepository {
+	if tx == nil {
+		return r
+	}
+	return &ProjectRepository{db: tx}
 }

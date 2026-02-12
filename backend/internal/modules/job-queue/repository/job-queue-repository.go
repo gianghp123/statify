@@ -57,3 +57,7 @@ func (r *JobQueueRepository) ClaimNextQueueByType(ctx context.Context, jobType e
 
 	return job, nil
 }
+
+func (r *JobQueueRepository) WithTx(tx *gorm.DB) IJobQueueRepository {
+	return &JobQueueRepository{db: tx}
+}

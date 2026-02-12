@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/core/sse"
 	"github.com/gianghp/statify/internal/database"
 	middlewares "github.com/gianghp/statify/internal/middlewares"
@@ -44,13 +45,15 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	// Add the colorful logger manually
 	router.Use(gin.Logger())
 
-	// Highly recommended: add recovery so your server doesn't die on errors
 	router.Use(gin.Recovery())
 
 	//Middlewares
 	router.Use(middlewares.ErrorLoggingMiddleware())
 
 	api := router.Group("/api/v1")
+
+	//transaction manager
+	transactionManager := transaction.NewTransactionManager(db)
 
 	// Repositories
 	userRepo := userRepository.NewUserRepository(db)
@@ -81,8 +84,8 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 
 	authSvc := authService.NewAuthService(userRepo, bcryptUtils, jwtService)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
-	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, jobQueueRepo, minioClientWrapper, accessPolicy)
-	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, jobQueueRepo, uploadSessionRepo, minioClientWrapper, accessPolicy)
+	projectSvc := projectService.NewProjectService(projectRepo, deploymentRepo, jobQueueRepo, minioClientWrapper, accessPolicy, transactionManager)
+	deploymentSvc := deploymentService.NewDeploymentService(deploymentRepo, projectRepo, jobQueueRepo, uploadSessionRepo, minioClientWrapper, accessPolicy, transactionManager)
 	userSvc := userService.NewUserService(userRepo)
 	analyticsSvc := analyticsService.NewAnalyticsService(metricsRepo)
 

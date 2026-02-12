@@ -9,6 +9,7 @@ import (
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
 	deploymentRepo "github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -90,8 +91,9 @@ func TestProjectService_CreateProject(t *testing.T) {
 			jRepo := new(jobQueueRepo.JobQueueRepositoryMock)
 			minioMock := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			tt.setupMocks(repo, dRepo, jRepo, minioMock, policyMock)
-			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock)
+			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock, tmMock)
 			project, err := s.CreateProject(context.TODO(), tt.userID, tt.request)
 			tt.expectedFunc(t, project, err)
 		})
@@ -170,8 +172,9 @@ func TestProjectService_ListProjects(t *testing.T) {
 			jRepo := new(jobQueueRepo.JobQueueRepositoryMock)
 			minioMock := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			tt.setupMocks(repo, dRepo, jRepo, policyMock)
-			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock)
+			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock, tmMock)
 			projects, err := s.ListProjects(context.TODO(), tt.userID, 1, 10, tt.deploymentStatus)
 			tt.expectedFunc(t, projects, err)
 		})
@@ -232,8 +235,9 @@ func TestProjectService_GetProjectByID(t *testing.T) {
 			jRepo := new(jobQueueRepo.JobQueueRepositoryMock)
 			minioMock := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
+			tmMock := new(transaction.TransactionManagerMock)
 			tt.setupMocks(repo, jRepo, policyMock)
-			s := NewProjectService(repo, nil, jRepo, minioMock, policyMock)
+			s := NewProjectService(repo, nil, jRepo, minioMock, policyMock, tmMock)
 			project, err := s.GetProjectByID(context.TODO(), tt.id, 1)
 			tt.expectedFunc(t, project, err)
 		})
@@ -245,16 +249,24 @@ func TestProjectService_DeleteProject(t *testing.T) {
 		name         string
 		projectID    uint
 		userID       uint
-		setupMocks   func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, minioMock *minio.Mock, policyMock *policy.AccessPolicyMock)
+		setupMocks   func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, minioMock *minio.Mock, policyMock *policy.AccessPolicyMock, tmMock *transaction.TransactionManagerMock)
 		expectedFunc func(t *testing.T, err error)
 	}{
 		{
 			name:      "Delete project successfully",
 			projectID: 1,
 			userID:    1,
-			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, minioMock *minio.Mock, policyMock *policy.AccessPolicyMock) {
+			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, minioMock *minio.Mock, policyMock *policy.AccessPolicyMock, tmMock *transaction.TransactionManagerMock) {
 				project := &models.Project{Model: gorm.Model{ID: 1}, UserID: 1}
 				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(project, nil)
+
+				tmMock.On("Transaction", mock.Anything, mock.Anything).Return(func(ctx context.Context, fn func(tx *gorm.DB) error) error {
+					return fn(nil)
+				})
+
+				repo.On("WithTx", mock.Anything).Return(repo)
+				jRepo.On("WithTx", mock.Anything).Return(jRepo)
+
 				repo.On("Delete", mock.Anything, project).Return(nil)
 				jRepo.On("Create", mock.Anything, mock.MatchedBy(func(j *models.JobQueue) bool {
 					return j.Type == enums.JobQueueTypeProjectDelete && j.Payload == "1"
@@ -273,8 +285,9 @@ func TestProjectService_DeleteProject(t *testing.T) {
 			jRepo := new(jobQueueRepo.JobQueueRepositoryMock)
 			minioMock := new(minio.Mock)
 			policyMock := new(policy.AccessPolicyMock)
-			tt.setupMocks(repo, dRepo, jRepo, minioMock, policyMock)
-			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock)
+			tmMock := new(transaction.TransactionManagerMock)
+			tt.setupMocks(repo, dRepo, jRepo, minioMock, policyMock, tmMock)
+			s := NewProjectService(repo, dRepo, jRepo, minioMock, policyMock, tmMock)
 			err := s.DeleteProject(context.TODO(), tt.projectID, tt.userID)
 			tt.expectedFunc(t, err)
 

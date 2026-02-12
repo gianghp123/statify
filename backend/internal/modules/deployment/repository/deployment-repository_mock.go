@@ -6,6 +6,7 @@ import (
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 type DeploymentRepositoryMock struct {
@@ -55,4 +56,9 @@ func (m *DeploymentRepositoryMock) MarkFailed(ctx context.Context, id uint, erro
 func (m *DeploymentRepositoryMock) MarkReady(ctx context.Context, id uint) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+func (m *DeploymentRepositoryMock) WithTx(tx *gorm.DB) IDeploymentRepository {
+	args := m.Called(tx)
+	return args.Get(0).(IDeploymentRepository)
 }

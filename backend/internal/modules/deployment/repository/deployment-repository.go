@@ -180,3 +180,7 @@ func (r *DeploymentRepository) MarkFailed(
 
 	return nil
 }
+
+func (r *DeploymentRepository) WithTx(tx *gorm.DB) IDeploymentRepository {
+	return &DeploymentRepository{db: tx}
+}

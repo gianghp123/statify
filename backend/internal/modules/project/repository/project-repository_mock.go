@@ -7,6 +7,7 @@ import (
 	"github.com/gianghp/statify/internal/core/repository"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 type ProjectRepositoryMock struct {
@@ -41,4 +42,9 @@ func (m *ProjectRepositoryMock) Update(ctx context.Context, project *models.Proj
 func (m *ProjectRepositoryMock) Delete(ctx context.Context, project *models.Project) error {
 	args := m.Called(ctx, project)
 	return args.Error(0)
+}
+
+func (m *ProjectRepositoryMock) WithTx(tx *gorm.DB) IProjectRepository {
+	args := m.Called(tx)
+	return args.Get(0).(IProjectRepository)
 }

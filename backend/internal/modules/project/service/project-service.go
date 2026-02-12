@@ -7,6 +7,7 @@ import (
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
 	deploymentRepo "github.com/gianghp/statify/internal/modules/deployment/repository"
@@ -16,18 +17,20 @@ import (
 	"github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
+	"gorm.io/gorm"
 )
 
 type ProjectService struct {
-	repo           repository.IProjectRepository
-	deploymentRepo deploymentRepo.IDeploymentRepository
-	jobQueueRepo   jobQueueRepo.IJobQueueRepository
-	minioClient    minio.Interface
-	policy         policy.IAccessPolicy
+	repo               repository.IProjectRepository
+	deploymentRepo     deploymentRepo.IDeploymentRepository
+	jobQueueRepo       jobQueueRepo.IJobQueueRepository
+	minioClient        minio.Interface
+	policy             policy.IAccessPolicy
+	transactionManager transaction.ITransactionManager
 }
 
-func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *ProjectService {
-	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, jobQueueRepo: jobQueueRepo, minioClient: minioClient, policy: policy}
+func NewProjectService(repo repository.IProjectRepository, deploymentRepo deploymentRepo.IDeploymentRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, minioClient minio.Interface, policy policy.IAccessPolicy, transactionManager transaction.ITransactionManager) *ProjectService {
+	return &ProjectService{repo: repo, deploymentRepo: deploymentRepo, jobQueueRepo: jobQueueRepo, minioClient: minioClient, policy: policy, transactionManager: transactionManager}
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, userID uint, req *request.CreateProjectRequest) (*response.ProjectDto, error) {
@@ -137,17 +140,26 @@ func (s *ProjectService) DeleteProject(ctx context.Context, projectID uint, user
 		return core.BadRequestError("Project is currently live, please turn it offline first")
 	}
 
-	if err := s.repo.Delete(ctx, project); err != nil {
-		return core.ParseDatabaseError(err)
-	}
+	if err := s.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+		txRepo := s.repo.WithTx(tx)
+		txJobQueueRepo := s.jobQueueRepo.WithTx(tx)
 
-	jobQueue := &models.JobQueue{
-		Type:    enums.JobQueueTypeProjectDelete,
-		Payload: fmt.Sprintf("%d", projectID),
-		Status:  enums.JobQueueStatusPending,
-	}
+		if err := txRepo.Delete(ctx, project); err != nil {
+			return core.ParseDatabaseError(err)
+		}
 
-	if err := s.jobQueueRepo.Create(ctx, jobQueue); err != nil {
+		jobQueue := &models.JobQueue{
+			Type:    enums.JobQueueTypeProjectDelete,
+			Payload: fmt.Sprintf("%d", projectID),
+			Status:  enums.JobQueueStatusPending,
+		}
+
+		if err := txJobQueueRepo.Create(ctx, jobQueue); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		return nil
+	}); err != nil {
 		return core.ParseDatabaseError(err)
 	}
 

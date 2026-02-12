@@ -39,3 +39,7 @@ func (r *UploadSessionRepository) FindUnexpiredByProjectID(ctx context.Context, 
 func (r *UploadSessionRepository) Update(ctx context.Context, uploadSession *models.DeploymentUploadSession) error {
 	return r.db.WithContext(ctx).Save(uploadSession).Error
 }
+
+func (r *UploadSessionRepository) WithTx(tx *gorm.DB) IUploadSessionRepository {
+	return &UploadSessionRepository{db: tx}
+}

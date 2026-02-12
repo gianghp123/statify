@@ -10,6 +10,7 @@ import (
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
 	coreRepo "github.com/gianghp/statify/internal/core/repository"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/auth/policy"
 	"github.com/gianghp/statify/internal/modules/deployment/dtos/response"
@@ -26,25 +27,27 @@ import (
 )
 
 type DeploymentService struct {
-	repo              repository.IDeploymentRepository
-	projectRepo       projectRepo.IProjectRepository
-	jobQueueRepo      jobQueueRepo.IJobQueueRepository
-	uploadSessionRepo uploadSessionRepo.IUploadSessionRepository
-	minioClient       minio.Interface
-	policy            policy.IAccessPolicy
-	cache             *lru.Cache[string, *models.Deployment]
+	repo               repository.IDeploymentRepository
+	projectRepo        projectRepo.IProjectRepository
+	jobQueueRepo       jobQueueRepo.IJobQueueRepository
+	uploadSessionRepo  uploadSessionRepo.IUploadSessionRepository
+	minioClient        minio.Interface
+	policy             policy.IAccessPolicy
+	cache              *lru.Cache[string, *models.Deployment]
+	transactionManager transaction.ITransactionManager
 }
 
-func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, uploadSessionRepo uploadSessionRepo.IUploadSessionRepository, minioClient minio.Interface, policy policy.IAccessPolicy) *DeploymentService {
+func NewDeploymentService(repo repository.IDeploymentRepository, projectRepo projectRepo.IProjectRepository, jobQueueRepo jobQueueRepo.IJobQueueRepository, uploadSessionRepo uploadSessionRepo.IUploadSessionRepository, minioClient minio.Interface, policy policy.IAccessPolicy, transactionManager transaction.ITransactionManager) *DeploymentService {
 	cache, _ := lru.New[string, *models.Deployment](10000)
 	return &DeploymentService{
-		repo:              repo,
-		projectRepo:       projectRepo,
-		jobQueueRepo:      jobQueueRepo,
-		uploadSessionRepo: uploadSessionRepo,
-		minioClient:       minioClient,
-		policy:            policy,
-		cache:             cache,
+		repo:               repo,
+		projectRepo:        projectRepo,
+		jobQueueRepo:       jobQueueRepo,
+		uploadSessionRepo:  uploadSessionRepo,
+		minioClient:        minioClient,
+		policy:             policy,
+		cache:              cache,
+		transactionManager: transactionManager,
 	}
 }
 
@@ -169,6 +172,7 @@ func (s *DeploymentService) CreatePresignedUrl(ctx context.Context, userID uint,
 }
 
 func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadSessionID uint) (*response.DeploymentDto, error) {
+
 	uploadSession, err := s.uploadSessionRepo.FindByID(ctx, uploadSessionID)
 
 	if err != nil {
@@ -180,27 +184,40 @@ func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadS
 		return nil, core.ParseMinioError(err)
 	}
 
-	deployment := models.Deployment{
-		ProjectID:    uploadSession.ProjectID,
-		Status:       enums.DeploymentStatusQueued,
-		OutputPrefix: uploadSession.OutputPrefix,
+	var deployment *models.Deployment
+
+	err = s.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+		txJobQueueRepo := s.jobQueueRepo.WithTx(tx)
+		txDeploymentRepo := s.repo.WithTx(tx)
+
+		deployment = &models.Deployment{
+			ProjectID:    uploadSession.ProjectID,
+			Status:       enums.DeploymentStatusQueued,
+			OutputPrefix: uploadSession.OutputPrefix,
+		}
+
+		if err := txDeploymentRepo.Create(ctx, deployment); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		jobQueue := models.JobQueue{
+			Type:         enums.JobQueueTypeDeploymentProcess,
+			DeploymentID: deployment.ID,
+			Status:       enums.JobQueueStatusPending,
+		}
+
+		if err := txJobQueueRepo.Create(ctx, &jobQueue); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	if err := s.repo.Create(ctx, &deployment); err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	jobQueue := models.JobQueue{
-		Type:         enums.JobQueueTypeDeploymentProcess,
-		DeploymentID: deployment.ID,
-		Status:       enums.JobQueueStatusPending,
-	}
-
-	if err := s.jobQueueRepo.Create(ctx, &jobQueue); err != nil {
-		return nil, core.ParseDatabaseError(err)
-	}
-
-	return utils.EntityToDto[*response.DeploymentDto](&deployment)
+	return utils.EntityToDto[*response.DeploymentDto](deployment)
 }
 
 func (s *DeploymentService) GetCurrentDeploymentFilesByProjectSubdomain(ctx context.Context, subdomain string, fileName string, clientETag string) (*response.FileDownloadDto, error) {
@@ -401,21 +418,30 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 		return core.BadRequestError("Deployment is currently live, please turn it offline first")
 	}
 
-	if err := s.repo.Delete(ctx, deployment); err != nil {
+	if err := s.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+		txDeploymentRepo := s.repo.WithTx(tx)
+		txJobQueueRepo := s.jobQueueRepo.WithTx(tx)
+
+		if err := txDeploymentRepo.Delete(ctx, deployment); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		jobQueue := models.JobQueue{
+			Type:         enums.JobQueueTypeDeploymentDelete,
+			DeploymentID: deploymentID,
+			Status:       enums.JobQueueStatusPending,
+		}
+
+		if err := txJobQueueRepo.Create(ctx, &jobQueue); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		return nil
+	}); err != nil {
 		return core.ParseDatabaseError(err)
 	}
 
 	s.cache.Remove(deployment.Project.Subdomain)
-
-	jobQueue := models.JobQueue{
-		Type:         enums.JobQueueTypeDeploymentDelete,
-		DeploymentID: deploymentID,
-		Status:       enums.JobQueueStatusPending,
-	}
-
-	if err := s.jobQueueRepo.Create(ctx, &jobQueue); err != nil {
-		return core.ParseDatabaseError(err)
-	}
 
 	return nil
 }
