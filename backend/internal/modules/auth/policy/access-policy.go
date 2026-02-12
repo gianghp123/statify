@@ -44,14 +44,9 @@ func (p *AccessPolicy) CheckDeploymentAccess(ctx context.Context, userID uint, d
 		return nil, nil, core.NotFoundError()
 	}
 
-	project, err := p.projectRepository.FindByID(ctx, deployment.ProjectID)
-	if err != nil {
-		return nil, nil, core.NotFoundError()
-	}
-
-	if project.UserID != userID {
+	if deployment.Project.UserID != userID {
 		return nil, nil, core.ForbiddenError()
 	}
 
-	return project, deployment, nil
+	return &deployment.Project, deployment, nil
 }
