@@ -128,7 +128,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 			deploymentStatus: enums.DeploymentStatusLive,
 			setupMocks: func(repo *repository.ProjectRepositoryMock, dRepo *deploymentRepo.DeploymentRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, policyMock *policy.AccessPolicyMock) {
 				repo.On("FindAllByUserID", context.TODO(), uint(1), 1, 10, enums.DeploymentStatusLive).Return(coreRepo.PaginatedEntities[*models.Project]{
-					Entities: []*models.Project{{Model: gorm.Model{ID: 1}, Name: "P1", Deployments: []models.Deployment{{Status: enums.DeploymentStatusLive}}}},
+					Entities: []*models.Project{{Model: gorm.Model{ID: 1}, Name: "P1", EffectiveStatus: enums.DeploymentStatusLive, Deployments: []models.Deployment{{Status: enums.DeploymentStatusLive}}}},
 				}, nil)
 			},
 			expectedFunc: func(t *testing.T, projects coreRepo.PaginatedEntities[*response.ProjectDto], err error) {
@@ -194,7 +194,7 @@ func TestProjectService_GetProjectByID(t *testing.T) {
 			id:               1,
 			deploymentStatus: "",
 			setupMocks: func(repo *repository.ProjectRepositoryMock, jRepo *jobQueueRepo.JobQueueRepositoryMock, policyMock *policy.AccessPolicyMock) {
-				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, Name: "P1", UserID: 1, Deployments: []models.Deployment{{Status: enums.DeploymentStatusReady}}, Subdomain: "p1"}, nil)
+				policyMock.On("CheckProjectAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, Name: "P1", UserID: 1, EffectiveStatus: enums.DeploymentStatusReady, Deployments: []models.Deployment{{Status: enums.DeploymentStatusReady}}, Subdomain: "p1"}, nil)
 			},
 			expectedFunc: func(t *testing.T, project *response.ProjectDto, err error) {
 				assert.NoError(t, err)

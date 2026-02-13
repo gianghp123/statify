@@ -81,13 +81,13 @@ func TestDeploymentService_ConfirmCreateDeployment(t *testing.T) {
 	tests := []struct {
 		name            string
 		uploadSessionID uint
-		setupMocks      func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock)
+		setupMocks      func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock, projectRepo *projectRepository.ProjectRepositoryMock)
 		expectedFunc    func(t *testing.T, err error)
 	}{
 		{
 			name:            "Confirm deployment successfully",
 			uploadSessionID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock, projectRepo *projectRepository.ProjectRepositoryMock) {
 				session := &models.DeploymentUploadSession{
 					Model:        gorm.Model{ID: 1},
 					ProjectID:    1,
@@ -102,6 +102,10 @@ func TestDeploymentService_ConfirmCreateDeployment(t *testing.T) {
 				})
 				repo.On("WithTx", mock.Anything).Return(repo)
 				jqRepo.On("WithTx", mock.Anything).Return(jqRepo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
+
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}}, nil)
+				projectRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(d *models.Deployment) bool {
 					return d.ProjectID == 1 && d.Status == enums.DeploymentStatusQueued
@@ -115,7 +119,7 @@ func TestDeploymentService_ConfirmCreateDeployment(t *testing.T) {
 		{
 			name:            "File not uploaded to MinIO",
 			uploadSessionID: 1,
-			setupMocks: func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock) {
+			setupMocks: func(repo *repository.DeploymentRepositoryMock, jqRepo *jobQueueRepository.JobQueueRepositoryMock, uploadSessionRepo *uploadSessionRepository.UploadSessionRepositoryMock, minioClient *minio.Mock, tmMock *transaction.TransactionManagerMock, projectRepo *projectRepository.ProjectRepositoryMock) {
 				session := &models.DeploymentUploadSession{
 					Model:     gorm.Model{ID: 1},
 					UploadKey: "test/source.zip",
@@ -132,13 +136,14 @@ func TestDeploymentService_ConfirmCreateDeployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := new(repository.DeploymentRepositoryMock)
+			projectRepo := new(projectRepository.ProjectRepositoryMock)
 			jqRepo := new(jobQueueRepository.JobQueueRepositoryMock)
 			uploadSessionRepo := new(uploadSessionRepository.UploadSessionRepositoryMock)
 			minioClient := new(minio.Mock)
 			tmMock := new(transaction.TransactionManagerMock)
-			tt.setupMocks(repo, jqRepo, uploadSessionRepo, minioClient, tmMock)
+			tt.setupMocks(repo, jqRepo, uploadSessionRepo, minioClient, tmMock, projectRepo)
 
-			s := NewDeploymentService(repo, nil, jqRepo, uploadSessionRepo, minioClient, nil, tmMock)
+			s := NewDeploymentService(repo, projectRepo, jqRepo, uploadSessionRepo, minioClient, nil, tmMock)
 			_, err := s.ConfirmCreateDeployment(context.TODO(), tt.uploadSessionID)
 			tt.expectedFunc(t, err)
 		})
@@ -159,8 +164,15 @@ func TestDeploymentService_TurnDeploymentLive(t *testing.T) {
 			deploymentID: 1,
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock, tmMock *transaction.TransactionManagerMock) {
 				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusReady}, nil)
+
+				tmMock.On("Transaction", mock.Anything, mock.Anything).Return(func(ctx context.Context, fn func(tx *gorm.DB) error) error {
+					return fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
+
 				repo.On("Update", mock.Anything, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}).Return(nil)
-				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}).Return(nil)
+				projectRepo.On("Update", mock.Anything, &models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1, EffectiveStatus: enums.DeploymentStatusLive}).Return(nil)
 			},
 			expectedFunc: func(t *testing.T, err error) {
 				assert.NoError(t, err)
@@ -230,6 +242,13 @@ func TestDeploymentService_TurnDeploymentOffline(t *testing.T) {
 			deploymentID: 1,
 			setupMocks: func(repo *repository.DeploymentRepositoryMock, projectRepo *projectRepository.ProjectRepositoryMock, policyMock *policy.AccessPolicyMock, tmMock *transaction.TransactionManagerMock) {
 				policyMock.On("CheckDeploymentAccess", mock.Anything, uint(1), uint(1)).Return(&models.Project{Model: gorm.Model{ID: 1}, UserID: 1, CurrentDeploymentID: 1}, &models.Deployment{Model: gorm.Model{ID: 1}, ProjectID: 1, Status: enums.DeploymentStatusLive}, nil)
+
+				tmMock.On("Transaction", mock.Anything, mock.Anything).Return(func(ctx context.Context, fn func(tx *gorm.DB) error) error {
+					return fn(nil)
+				})
+				repo.On("WithTx", mock.Anything).Return(repo)
+				projectRepo.On("WithTx", mock.Anything).Return(projectRepo)
+
 				repo.On("Update", mock.Anything, mock.Anything).Return(nil)
 				projectRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},
@@ -351,6 +370,7 @@ func TestDeploymentService_DeleteDeployment(t *testing.T) {
 				jobQueueRepo.On("WithTx", mock.Anything).Return(jobQueueRepo)
 
 				repo.On("Delete", mock.Anything, deploymentModel).Return(nil)
+				projectRepo.On("FindByID", mock.Anything, uint(1)).Return(projectModel, nil)
 				jobQueueRepo.On("Create", mock.Anything, mock.MatchedBy(func(job *models.JobQueue) bool {
 					return job.Type == enums.JobQueueTypeDeploymentDelete &&
 						job.DeploymentID == deploymentModel.ID &&

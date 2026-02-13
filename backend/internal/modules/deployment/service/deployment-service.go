@@ -365,15 +365,26 @@ func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID
 		return core.BadRequestError("Deployment is not ready or is living")
 	}
 
-	deployment.Status = enums.DeploymentStatusLive
-	if err := s.repo.Update(ctx, deployment); err != nil {
-		return core.ParseDatabaseError(err)
-	}
+	err = s.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+		txDeploymentRepo := s.repo.WithTx(tx)
+		txProjectRepo := s.projectRepo.WithTx(tx)
 
-	project.CurrentDeploymentID = deploymentID
-	project.EffectiveStatus = enums.DeploymentStatusLive
-	if err := s.projectRepo.Update(ctx, project); err != nil {
-		return core.ParseDatabaseError(err)
+		deployment.Status = enums.DeploymentStatusLive
+		if err := txDeploymentRepo.Update(ctx, deployment); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		project.CurrentDeploymentID = deploymentID
+		project.EffectiveStatus = enums.DeploymentStatusLive
+		if err := txProjectRepo.Update(ctx, project); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	s.cache.Remove(project.Subdomain)
@@ -391,30 +402,41 @@ func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymen
 		return core.BadRequestError("Deployment is not the current deployment")
 	}
 
-	deployment := &models.Deployment{Model: gorm.Model{ID: deploymentID}}
-	deployment.Status = enums.DeploymentStatusReady
-	if err := s.repo.Update(ctx, deployment); err != nil {
-		return core.ParseDatabaseError(err)
-	}
+	err = s.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+		txDeploymentRepo := s.repo.WithTx(tx)
+		txProjectRepo := s.projectRepo.WithTx(tx)
 
-	project.CurrentDeploymentID = 0
+		deploymentToUpdate := &models.Deployment{Model: gorm.Model{ID: deploymentID}}
+		deploymentToUpdate.Status = enums.DeploymentStatusReady
+		if err := txDeploymentRepo.Update(ctx, deploymentToUpdate); err != nil {
+			return core.ParseDatabaseError(err)
+		}
 
-	// Recalculate EffectiveStatus
-	if project.LatestDeploymentID != 0 {
-		latest, err := s.repo.FindByID(ctx, project.LatestDeploymentID)
-		if err == nil {
-			project.EffectiveStatus = latest.Status
+		project.CurrentDeploymentID = 0
+
+		// Recalculate EffectiveStatus
+		if project.LatestDeploymentID != 0 {
+			latest, err := txDeploymentRepo.FindByID(ctx, project.LatestDeploymentID)
+			if err == nil {
+				project.EffectiveStatus = latest.Status
+			} else {
+				// Fallback if latest not found? Should not happen.
+				// If latest is missing, maybe status is empty.
+				project.EffectiveStatus = ""
+			}
 		} else {
-			// Fallback if latest not found? Should not happen.
-			// If latest is missing, maybe status is empty.
 			project.EffectiveStatus = ""
 		}
-	} else {
-		project.EffectiveStatus = ""
-	}
 
-	if err := s.projectRepo.Update(ctx, project); err != nil {
-		return core.ParseDatabaseError(err)
+		if err := txProjectRepo.Update(ctx, project); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	s.cache.Remove(project.Subdomain)

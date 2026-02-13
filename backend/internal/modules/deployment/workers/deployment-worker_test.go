@@ -39,9 +39,6 @@ func TestDeploymentWorker_ProcessBuild(t *testing.T) {
 
 				depRepo.On("MarkReady", mock.Anything, uint(1)).Return(nil)
 				projRepo.On("MarkReady", mock.Anything, uint(1), uint(1)).Return(nil)
-
-				projRepo.On("FindByID", mock.Anything, mock.Anything).Return(&models.Project{LatestDeploymentID: 1}, nil)
-				projRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},
 		},
 		{
@@ -60,9 +57,6 @@ func TestDeploymentWorker_ProcessBuild(t *testing.T) {
 
 				depRepo.On("MarkFailed", mock.Anything, uint(1), "build error").Return(nil)
 				projRepo.On("MarkFailed", mock.Anything, uint(1), uint(1)).Return(nil)
-
-				projRepo.On("FindByID", mock.Anything, mock.Anything).Return(&models.Project{LatestDeploymentID: 1}, nil)
-				projRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 			},
 		},
 		{
