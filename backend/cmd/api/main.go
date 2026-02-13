@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"net/http"
+	"os"
 
 	"github.com/gianghp/statify/internal"
 	"github.com/gianghp/statify/internal/assets"
@@ -11,6 +11,7 @@ import (
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gianghp/statify/internal/database/migrations"
 	"github.com/gianghp/statify/internal/utils"
+	"github.com/gianghp/statify/internal/utils/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -20,8 +21,11 @@ import (
 )
 
 func main() {
+	logger.Init()
+	l := logger.Get()
+
 	if err := godotenv.Load(".env.local"); err != nil {
-		log.Println("No .env.local file found, using system environment variables")
+		l.Info("No .env.local file found, using system environment variables")
 	}
 
 	connectStr := configs.LoadDatabaseConfig()
@@ -29,11 +33,11 @@ func main() {
 	db, err := database.InitDatabase(connectStr)
 
 	if err != nil {
-		log.Fatal("Failed when connecting to the database")
-		return
+		l.Error("Failed when connecting to the database", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Database connected successfully")
+	l.Info("Database connected successfully")
 
 	goose.SetBaseFS(migrations.FS)
 
@@ -60,8 +64,8 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("Failed to initialize minio client", err)
-		return
+		l.Error("Failed to initialize minio client", "error", err)
+		os.Exit(1)
 	}
 
 	broker := sse.NewBroker()

@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gianghp/statify/internal/core/sse"
@@ -25,13 +25,13 @@ func (l *PostgresNotificationListener) Run(ctx context.Context, topic string) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Postgres listener stopped")
+			slog.Info("Postgres listener stopped")
 			return
 		default:
 		}
 
 		if err := l.listenOnce(ctx, topic); err != nil {
-			log.Printf("Listener error: %v. Reconnecting in 5s...", err)
+			slog.Error("Listener error", "error", err, "topic", topic)
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -42,7 +42,7 @@ func (l *PostgresNotificationListener) listenOnce(ctx context.Context, topic str
 	conn, err := pgx.Connect(ctx, l.connStr)
 
 	if err != nil {
-		log.Printf("Listener connection error: %v", err)
+		slog.Error("Listener connection error", "error", err)
 		return err
 	}
 	defer conn.Close(ctx)
@@ -52,7 +52,7 @@ func (l *PostgresNotificationListener) listenOnce(ctx context.Context, topic str
 	for {
 		notification, err := conn.WaitForNotification(ctx)
 		if err != nil {
-			log.Printf("Error waiting for notification: %v", err)
+			slog.Error("Error waiting for notification", "error", err)
 			return err
 		}
 

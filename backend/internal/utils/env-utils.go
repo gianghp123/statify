@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 )
@@ -22,7 +22,7 @@ func GetSecret(envName string, defaultValue string) string {
 		if err == nil {
 			return strings.TrimSpace(string(content))
 		}
-		fmt.Printf("Warning: Could not read secret file %s: %v\n", filePath, err)
+		slog.Warn("Could not read secret file", "path", filePath, "error", err)
 	}
 
 	return GetEnv(envName, defaultValue)

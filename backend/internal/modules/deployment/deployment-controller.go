@@ -2,7 +2,7 @@ package deployment
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -142,7 +142,7 @@ func (c *DeploymentController) ServeFiles(ctx *gin.Context) (*wrapper.StaticServ
 	// Optional: strip the leading slash if it exists
 	fileName = strings.TrimPrefix(fileName, "/")
 
-	log.Println("host", host, "fileName", fileName, "clientEtag", clientEtag)
+	slog.Info("serving files", "host", host, "fileName", fileName, "clientEtag", clientEtag)
 	fileDTO, err := c.service.GetCurrentDeploymentFilesByProjectSubdomain(ctx, host, fileName, clientEtag)
 
 	if err != nil {

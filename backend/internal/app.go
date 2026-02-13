@@ -2,7 +2,7 @@ package internal
 
 import (
 	"context"
-	"log"
+	"os"
 
 	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/core/sse"
@@ -30,6 +30,7 @@ import (
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gianghp/statify/internal/utils/bcrypt"
+	"github.com/gianghp/statify/internal/utils/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
@@ -47,8 +48,9 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 
 	router.Use(gin.Recovery())
 
+	l := logger.Get()
 	//Middlewares
-	router.Use(middlewares.ErrorLoggingMiddleware())
+	router.Use(middlewares.LoggingMiddleware(l))
 
 	api := router.Group("/api/v1")
 
@@ -71,7 +73,8 @@ func NewApp(db *gorm.DB, minioClient *minio.Client, broker *sse.Broker, listener
 	adminPassword := utils.GetEnv("ADMIN_PASSWORD", "admin")
 	adminUsername := utils.GetEnv("ADMIN_USERNAME", "admin")
 	if err := authService.CreateAdmin(userRepo, bcryptUtils, adminEmail, adminPassword, adminUsername); err != nil {
-		log.Fatal(err)
+		l.Error("Failed to create admin user", "error", err)
+		os.Exit(1)
 	}
 
 	//Metric collector

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"os"
 
 	"github.com/gianghp/statify/internal/configs"
 	"github.com/gianghp/statify/internal/core"
@@ -13,14 +13,18 @@ import (
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
+	"github.com/gianghp/statify/internal/utils/logger"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 func main() {
+	logger.Init()
+	l := logger.Get()
+
 	if err := godotenv.Load(".env.local"); err != nil {
-		log.Println("No .env.local file found, using system environment variables")
+		l.Info("No .env.local file found, using system environment variables")
 	}
 
 	connectStr := configs.LoadDatabaseConfig()
@@ -28,11 +32,11 @@ func main() {
 	db, err := database.InitDatabase(connectStr)
 
 	if err != nil {
-		log.Fatal("Failed when connecting to the database")
-		return
+		l.Error("Failed when connecting to the database", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Database connected successfully")
+	l.Info("Database connected successfully")
 
 	accessKeyID, secretAccessKey := configs.LoadMinioConfig()
 	useSSL := false
@@ -44,8 +48,8 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("Failed to initialize minio client", err)
-		return
+		l.Error("Failed to initialize minio client", "error", err)
+		os.Exit(1)
 	}
 
 	deploymentRepository := repository.NewDeploymentRepository(db)

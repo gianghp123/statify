@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"mime"
 	"path/filepath"
 	"strings"
@@ -75,7 +75,7 @@ func (s *FileProcessor) ProcessDeploymentFiles(ctx context.Context, deployment *
 
 		err = s.uploadFileToMinio(ctx, deployment.OutputPrefix, file)
 		if err != nil {
-			log.Printf("Upload failed for %s: %v. Rolling back...", file.Name, err)
+			slog.Error("Upload failed", "file", file.Name, "error", err)
 			s.rollbackMinioUploads(ctx, uploadedObjects)
 			return err
 		}
@@ -127,7 +127,7 @@ func (s *FileProcessor) rollbackMinioUploads(ctx context.Context, objects []stri
 	errorCh := s.minioClient.RemoveObjects(ctx, s.bucketName, objectsCh, minioGo.RemoveObjectsOptions{})
 
 	for err := range errorCh {
-		log.Printf("CRITICAL: Failed to delete object during rollback: %s, Error: %v", err.ObjectName, err.Err)
+		slog.Error("CRITICAL: Failed to delete object during rollback", "object", err.ObjectName, "error", err.Err)
 	}
 }
 
@@ -144,7 +144,7 @@ func (s *FileProcessor) DeleteMinioFolder(ctx context.Context, prefix string) er
 			Recursive: true,
 		}) {
 			if object.Err != nil {
-				log.Printf("Error listing object for deletion: %v", object.Err)
+				slog.Error("Error listing object for deletion", "error", object.Err)
 				continue
 			}
 			objectsCh <- object

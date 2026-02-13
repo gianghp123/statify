@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"log"
+	"log/slog"
 
 	"github.com/gianghp/statify/internal/core/enums"
 	"github.com/gianghp/statify/internal/database/models"
@@ -75,7 +75,7 @@ func (w *DeploymentWorker) workerLoop(ctx context.Context, jobType enums.JobQueu
 			w.processProjectDelete(ctx, job, sleep, maxRetry)
 
 		default:
-			log.Printf("unknown job type: %v", job.Type)
+			slog.Warn("unknown job type", "type", job.Type)
 		}
 	}
 }
@@ -102,7 +102,7 @@ func (w *DeploymentWorker) processBuild(ctx context.Context, job *models.JobQueu
 	}
 
 	if updateErr != nil {
-		log.Printf("failed to update job: %v", updateErr)
+		slog.Error("failed to update job", "error", updateErr)
 	}
 }
 
@@ -148,7 +148,7 @@ func (w *DeploymentWorker) processDelete(ctx context.Context, job *models.JobQue
 	})
 
 	if updateErr != nil {
-		log.Printf("failed to update job: %v", updateErr)
+		slog.Error("failed to update job", "error", updateErr)
 	}
 }
 func (w *DeploymentWorker) processProjectDelete(ctx context.Context, job *models.JobQueue, sleepTime time.Duration, maxRetry int) {
@@ -194,6 +194,6 @@ func (w *DeploymentWorker) processProjectDelete(ctx context.Context, job *models
 	})
 
 	if updateErr != nil {
-		log.Printf("failed to update job: %v", updateErr)
+		slog.Error("failed to update job", "error", updateErr)
 	}
 }

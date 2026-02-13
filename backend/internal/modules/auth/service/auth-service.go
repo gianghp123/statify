@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/gianghp/statify/internal/core"
 	"github.com/gianghp/statify/internal/core/enums"
@@ -119,7 +119,7 @@ func (s *AuthService) Me(ctx context.Context, userID uint) (*userResponse.UserDt
 
 func CreateAdmin(userRepo repository.IUserRepository, bcrypt bcrypt.IBcryptUtils, email, password, username string) error {
 	if _, err := userRepo.FindByEmail(context.TODO(), email); err == nil {
-		log.Println("Admin already exists")
+		slog.Info("Admin already exists")
 		return nil
 	}
 
@@ -136,11 +136,11 @@ func CreateAdmin(userRepo repository.IUserRepository, bcrypt bcrypt.IBcryptUtils
 	}
 
 	if err := userRepo.Create(context.TODO(), user); err != nil {
-		log.Println("Admin created failed")
+		slog.Error("Admin creation failed")
 		return core.InternalError()
 	}
 
-	log.Println("Admin created successfully")
+	slog.Info("Admin created successfully")
 
 	return nil
 }
