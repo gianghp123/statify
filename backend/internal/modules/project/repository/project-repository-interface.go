@@ -16,5 +16,7 @@ type IProjectRepository interface {
 	Create(ctx context.Context, project *models.Project) error
 	Update(ctx context.Context, project *models.Project) error
 	Delete(ctx context.Context, project *models.Project) error
+	MarkReady(ctx context.Context, projectID uint, deploymentID uint) error
+	MarkFailed(ctx context.Context, projectID uint, deploymentID uint) error
 	WithTx(tx *gorm.DB) IProjectRepository
 }

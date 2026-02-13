@@ -24,29 +24,38 @@ func (r *JobQueueRepository) Update(ctx context.Context, job *models.JobQueue) e
 	return r.db.WithContext(ctx).Save(job).Error
 }
 
-func (r *JobQueueRepository) ClaimNextQueueByType(ctx context.Context, jobType enums.JobQueueType) (*models.JobQueue, error) {
-	var job *models.JobQueue
+func (r *JobQueueRepository) ClaimNextQueueByType(
+	ctx context.Context,
+	jobType enums.JobQueueType,
+) (*models.JobQueue, error) {
 
-	err := r.db.WithContext(ctx).Raw(`
-		UPDATE job_queues
-		SET status = ?, updated_at = NOW()
-		WHERE id = (
-				SELECT id
-				FROM job_queues
-				WHERE type = ?
-				AND status = ?
-				ORDER BY created_at ASC
-				FOR UPDATE SKIP LOCKED
-				LIMIT 1
-		)
-		RETURNING *
-	`, enums.JobQueueStatusProcessing,
+	var job models.JobQueue
+
+	tx := r.db.WithContext(ctx).Raw(`
+        UPDATE job_queues
+        SET status = ?, updated_at = NOW()
+        WHERE id = (
+            SELECT id
+            FROM job_queues
+            WHERE type = ?
+            AND status = ?
+            ORDER BY created_at ASC
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+        )
+        RETURNING *
+    `,
+		enums.JobQueueStatusProcessing,
 		jobType,
 		enums.JobQueueStatusPending,
-	).Scan(&job).Error
+	).Scan(&job)
 
-	if err != nil {
-		return nil, err
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return nil, nil
 	}
 
 	if err := r.db.WithContext(ctx).
@@ -55,7 +64,7 @@ func (r *JobQueueRepository) ClaimNextQueueByType(ctx context.Context, jobType e
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (r *JobQueueRepository) WithTx(tx *gorm.DB) IJobQueueRepository {

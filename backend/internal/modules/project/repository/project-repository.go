@@ -46,34 +46,8 @@ func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID uint, pa
 
 	db := r.db.WithContext(ctx).Model(&models.Project{}).Where("projects.user_id = ?", userID)
 
-	// 3. Conditional Status Filter
 	if status != "" {
-		// Logic:
-		// 1. IF current_deployment_id > 0: Check if the deployment with that ID has the specific status.
-		// 2. OR IF current_deployment_id == 0: Check if the LATEST deployment for this project has the specific status.
-		db = db.Where(`
-			? = (
-				CASE 
-					-- PRIORITY 1: If the project is currently running (Pinned ID is set AND its status is LIVE)
-					-- Then the project status is forcefully 'LIVE', regardless of newer commits.
-					WHEN projects.current_deployment_id > 0 AND (
-						SELECT d.status 
-						FROM deployments d 
-						WHERE d.id = projects.current_deployment_id
-					) = 'LIVE' THEN 'LIVE'
-
-					-- PRIORITY 2: Otherwise, the status is determined by the strictly LATEST deployment.
-					-- (e.g., READY, FAILED, BUILDING, or a LIVE deployment that isn't pinned yet)
-					ELSE (
-						SELECT d.status 
-						FROM deployments d 
-						WHERE d.project_id = projects.id 
-						ORDER BY d.created_at DESC 
-						LIMIT 1
-					)
-				END
-			)
-		`, status)
+		db = db.Where("projects.effective_status = ?", status)
 	}
 
 	// 4. Count
@@ -107,6 +81,23 @@ func (r *ProjectRepository) Update(ctx context.Context, project *models.Project)
 
 func (r *ProjectRepository) Delete(ctx context.Context, project *models.Project) error {
 	return r.db.WithContext(ctx).Delete(project).Error
+}
+
+func (r *ProjectRepository) MarkReady(ctx context.Context, projectID uint, deploymentID uint) error {
+	// Logic:
+	// Only update EffectiveStatus if project is not currently pinned/live AND this deployment is the Latest.
+	// We use a raw SQL UPDATE with WHERE clause to do this atomically and efficiently.
+
+	return r.db.WithContext(ctx).Model(&models.Project{}).
+		Where("id = ? AND latest_deployment_id = ? AND current_deployment_id = 0", projectID, deploymentID).
+		Update("effective_status", enums.DeploymentStatusReady).Error
+}
+
+func (r *ProjectRepository) MarkFailed(ctx context.Context, projectID uint, deploymentID uint) error {
+	// Logic: Same as MarkReady
+	return r.db.WithContext(ctx).Model(&models.Project{}).
+		Where("id = ? AND latest_deployment_id = ? AND current_deployment_id = 0", projectID, deploymentID).
+		Update("effective_status", enums.DeploymentStatusFailed).Error
 }
 
 func (r *ProjectRepository) WithTx(tx *gorm.DB) IProjectRepository {

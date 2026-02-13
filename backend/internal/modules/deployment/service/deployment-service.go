@@ -210,6 +210,20 @@ func (s *DeploymentService) ConfirmCreateDeployment(ctx context.Context, uploadS
 			return core.ParseDatabaseError(err)
 		}
 
+		// Update Project LatestDeploymentID and EffectiveStatus
+		txProjectRepo := s.projectRepo.WithTx(tx)
+		projectToUpdate, err := txProjectRepo.FindByID(ctx, deployment.ProjectID)
+		if err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
+		projectToUpdate.LatestDeploymentID = deployment.ID
+		projectToUpdate.EffectiveStatus = enums.DeploymentStatusQueued
+
+		if err := txProjectRepo.Update(ctx, projectToUpdate); err != nil {
+			return core.ParseDatabaseError(err)
+		}
+
 		return nil
 	})
 
@@ -357,6 +371,7 @@ func (s *DeploymentService) TurnDeploymentLive(ctx context.Context, deploymentID
 	}
 
 	project.CurrentDeploymentID = deploymentID
+	project.EffectiveStatus = enums.DeploymentStatusLive
 	if err := s.projectRepo.Update(ctx, project); err != nil {
 		return core.ParseDatabaseError(err)
 	}
@@ -383,6 +398,21 @@ func (s *DeploymentService) TurnDeploymentOffline(ctx context.Context, deploymen
 	}
 
 	project.CurrentDeploymentID = 0
+
+	// Recalculate EffectiveStatus
+	if project.LatestDeploymentID != 0 {
+		latest, err := s.repo.FindByID(ctx, project.LatestDeploymentID)
+		if err == nil {
+			project.EffectiveStatus = latest.Status
+		} else {
+			// Fallback if latest not found? Should not happen.
+			// If latest is missing, maybe status is empty.
+			project.EffectiveStatus = ""
+		}
+	} else {
+		project.EffectiveStatus = ""
+	}
+
 	if err := s.projectRepo.Update(ctx, project); err != nil {
 		return core.ParseDatabaseError(err)
 	}
@@ -434,6 +464,72 @@ func (s *DeploymentService) DeleteDeployment(ctx context.Context, deploymentID u
 
 		if err := txJobQueueRepo.Create(ctx, &jobQueue); err != nil {
 			return core.ParseDatabaseError(err)
+		}
+
+		// Check if we are deleting the LatestDeployment
+		project, err := s.projectRepo.FindByID(ctx, deployment.ProjectID)
+		if err != nil {
+			return err
+		}
+
+		if project.LatestDeploymentID == deploymentID {
+			// Find new latest
+			// We need a method to find the latest deployment excluding the one being deleted.
+			// Or just find the latest one created before this one?
+			// The repository `FindAllByProjectID` orders by created_at DESC.
+			// We can use that, expecting the current latest to be index 0 (or 1 if we haven't deleted it yet).
+			// Since we act inside a transaction and call `txDeploymentRepo.Delete` above, the record is soft-deleted.
+			// So querying `txDeploymentRepo` for latest should skip it.
+
+			// We need a way to get the latest deployment from repo.
+			// `FindAllByProjectID` does not support Limit=1 efficiently without fetching a page.
+			// But page 1 limit 1 is fine.
+
+			deployments, err := txDeploymentRepo.FindAllByProjectID(ctx, deployment.ProjectID, 1, 1)
+			if err != nil {
+				return err
+			}
+
+			if len(deployments.Entities) > 0 {
+				newLatest := deployments.Entities[0]
+				project.LatestDeploymentID = newLatest.ID
+
+				// Calculate EffectiveStatus
+				if project.CurrentDeploymentID != 0 {
+					// Logic: If pinned, EffectiveStatus is LIVE (handled normally),
+					// BUT `EffectiveStatus` logic in Repo was:
+					// "IF current_deployment_id > 0 ... THEN 'LIVE'"
+					// "ELSE ... status of latest"
+					// So if pinned, it should stay LIVE?
+					// Wait, if we delete the deployment that is LIVE...
+					// `DeleteDeployment` checks `if deployment.Status == enums.DeploymentStatusLive { return BadRequest }`.
+					// So we never delete the LIVE deployment.
+					// So `CurrentDeploymentID` is safe.
+
+					// However, does `EffectiveStatus` reflect the Live status if pinned?
+					// Yes, usually.
+					// Logic: If Pinned -> LIVE. If not Pinned -> Latest Status.
+
+					curr, err := txDeploymentRepo.FindByID(ctx, project.CurrentDeploymentID)
+					if err == nil && curr.Status == enums.DeploymentStatusLive {
+						project.EffectiveStatus = enums.DeploymentStatusLive
+					} else {
+						// Fallback to latest
+						project.EffectiveStatus = newLatest.Status
+					}
+
+				} else {
+					project.EffectiveStatus = newLatest.Status
+				}
+			} else {
+				project.LatestDeploymentID = 0
+				project.EffectiveStatus = ""
+			}
+
+			txProjectRepo := s.projectRepo.WithTx(tx)
+			if err := txProjectRepo.Update(ctx, project); err != nil {
+				return err
+			}
 		}
 
 		return nil

@@ -6,11 +6,13 @@ import (
 
 	"github.com/gianghp/statify/internal/configs"
 	"github.com/gianghp/statify/internal/core"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/modules/deployment/workers"
 	"github.com/gianghp/statify/internal/modules/file/processor"
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
+	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
 	storageMinio "github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	"github.com/gianghp/statify/internal/utils/logger"
@@ -53,10 +55,12 @@ func main() {
 	}
 
 	deploymentRepository := repository.NewDeploymentRepository(db)
+	projectRepository := projectRepo.NewProjectRepository(db)
 	minioClientWrapper := storageMinio.NewClient(minioClient)
 	fileProcessor := processor.NewFileProcessor(minioClientWrapper, deploymentRepository, utils.GetEnv("MINIO_BUCKET", "statify"))
 	jobQueueRepository := jobQueueRepo.NewJobQueueRepository(db)
-	deploymentWorker := workers.NewDeploymentWorker(jobQueueRepository, deploymentRepository, fileProcessor)
+	transactionManager := transaction.NewTransactionManager(db)
+	deploymentWorker := workers.NewDeploymentWorker(jobQueueRepository, deploymentRepository, projectRepository, fileProcessor, transactionManager)
 
 	deploymentWorker.Run(context.Background(), core.MaxProcessGoroutines, core.MaxDeleteGoroutines, core.MaxProjectDeleteGoroutines, core.SleepTime, core.MaxRetry)
 

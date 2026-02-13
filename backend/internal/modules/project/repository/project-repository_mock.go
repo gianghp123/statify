@@ -44,6 +44,16 @@ func (m *ProjectRepositoryMock) Delete(ctx context.Context, project *models.Proj
 	return args.Error(0)
 }
 
+func (m *ProjectRepositoryMock) MarkReady(ctx context.Context, projectID uint, deploymentID uint) error {
+	args := m.Called(ctx, projectID, deploymentID)
+	return args.Error(0)
+}
+
+func (m *ProjectRepositoryMock) MarkFailed(ctx context.Context, projectID uint, deploymentID uint) error {
+	args := m.Called(ctx, projectID, deploymentID)
+	return args.Error(0)
+}
+
 func (m *ProjectRepositoryMock) WithTx(tx *gorm.DB) IProjectRepository {
 	args := m.Called(tx)
 	return args.Get(0).(IProjectRepository)

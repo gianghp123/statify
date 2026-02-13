@@ -8,24 +8,31 @@ import (
 	"log/slog"
 
 	"github.com/gianghp/statify/internal/core/enums"
+	"github.com/gianghp/statify/internal/core/repository/transaction"
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/modules/file/processor"
 	jobQueueRepo "github.com/gianghp/statify/internal/modules/job-queue/repository"
+	projectRepo "github.com/gianghp/statify/internal/modules/project/repository"
 	"github.com/gianghp/statify/internal/utils"
+	"gorm.io/gorm"
 )
 
 type DeploymentWorker struct {
 	jobQueueRepository   jobQueueRepo.IJobQueueRepository
 	deploymentRepository repository.IDeploymentRepository
+	projectRepository    projectRepo.IProjectRepository
 	fileProcessor        processor.IFileProcessor
+	transactionManager   transaction.ITransactionManager
 }
 
-func NewDeploymentWorker(jobQueueRepository jobQueueRepo.IJobQueueRepository, deploymentRepository repository.IDeploymentRepository, fileProcessor processor.IFileProcessor) *DeploymentWorker {
+func NewDeploymentWorker(jobQueueRepository jobQueueRepo.IJobQueueRepository, deploymentRepository repository.IDeploymentRepository, projectRepository projectRepo.IProjectRepository, fileProcessor processor.IFileProcessor, transactionManager transaction.ITransactionManager) *DeploymentWorker {
 	return &DeploymentWorker{
 		jobQueueRepository:   jobQueueRepository,
 		deploymentRepository: deploymentRepository,
+		projectRepository:    projectRepository,
 		fileProcessor:        fileProcessor,
+		transactionManager:   transactionManager,
 	}
 }
 
@@ -90,16 +97,29 @@ func (w *DeploymentWorker) processBuild(ctx context.Context, job *models.JobQueu
 
 	err := w.fileProcessor.ProcessDeploymentFiles(ctx, &deployment)
 
-	var updateErr error
-	if err != nil {
-		updateErr = utils.Retry(maxRetry, sleepTime, func() error {
-			return w.deploymentRepository.MarkFailed(ctx, deployment.ID, err.Error())
+	updateErr := utils.Retry(maxRetry, sleepTime, func() error {
+		return w.transactionManager.Transaction(ctx, func(tx *gorm.DB) error {
+			txDeploymentRepo := w.deploymentRepository.WithTx(tx)
+			txProjectRepo := w.projectRepository.WithTx(tx)
+
+			if err != nil {
+				if err := txDeploymentRepo.MarkFailed(ctx, deployment.ID, err.Error()); err != nil {
+					return err
+				}
+				if err := txProjectRepo.MarkFailed(ctx, deployment.ProjectID, deployment.ID); err != nil {
+					return err
+				}
+			} else {
+				if err := txDeploymentRepo.MarkReady(ctx, deployment.ID); err != nil {
+					return err
+				}
+				if err := txProjectRepo.MarkReady(ctx, deployment.ProjectID, deployment.ID); err != nil {
+					return err
+				}
+			}
+			return nil
 		})
-	} else {
-		updateErr = utils.Retry(maxRetry, sleepTime, func() error {
-			return w.deploymentRepository.MarkReady(ctx, deployment.ID)
-		})
-	}
+	})
 
 	if updateErr != nil {
 		slog.Error("failed to update job", "error", updateErr)

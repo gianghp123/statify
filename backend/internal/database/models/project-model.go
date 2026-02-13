@@ -1,6 +1,9 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"github.com/gianghp/statify/internal/core/enums"
+	"gorm.io/gorm"
+)
 
 type Project struct {
 	gorm.Model
@@ -9,5 +12,7 @@ type Project struct {
 	UserID              uint
 	User                User
 	CurrentDeploymentID uint
+	EffectiveStatus     enums.DeploymentStatus
+	LatestDeploymentID  uint
 	Deployments         []Deployment `gorm:"constraint:OnDelete:CASCADE;foreignKey:ProjectID"`
 }

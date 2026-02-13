@@ -9,12 +9,14 @@ import (
 	"mime"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gianghp/statify/internal/database/models"
 	"github.com/gianghp/statify/internal/modules/deployment/repository"
 	"github.com/gianghp/statify/internal/storage/minio"
 	"github.com/gianghp/statify/internal/utils"
 	minioGo "github.com/minio/minio-go/v7"
+	"golang.org/x/sync/errgroup"
 )
 
 type FileProcessor struct {
@@ -32,8 +34,6 @@ func NewFileProcessor(minioClient minio.Interface, repo repository.IDeploymentRe
 }
 
 func (s *FileProcessor) ProcessDeploymentFiles(ctx context.Context, deployment *models.Deployment) error {
-	var uploadedObjects []string
-
 	objectName := fmt.Sprintf("%s/temp", deployment.OutputPrefix)
 
 	stat, err := s.minioClient.StatObject(ctx, s.bucketName, objectName, minioGo.StatObjectOptions{})
@@ -68,19 +68,35 @@ func (s *FileProcessor) ProcessDeploymentFiles(ctx context.Context, deployment *
 		return err
 	}
 
+	uploadedObjects := make([]string, 0)
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(10)
+	var mu sync.Mutex
+
 	for _, file := range zipReader.File {
-		if file.FileInfo().IsDir() {
+		currentFile := file
+
+		if currentFile.FileInfo().IsDir() {
 			continue
 		}
 
-		err = s.uploadFileToMinio(ctx, deployment.OutputPrefix, file)
-		if err != nil {
-			slog.Error("Upload failed", "file", file.Name, "error", err)
-			s.rollbackMinioUploads(ctx, uploadedObjects)
-			return err
-		}
-		fullKey := fmt.Sprintf("%s/%s", deployment.OutputPrefix, file.Name)
-		uploadedObjects = append(uploadedObjects, fullKey)
+		group.Go(func() error {
+			if err := s.uploadFileToMinio(ctx, deployment.OutputPrefix, currentFile); err != nil {
+				return err
+			}
+			fullKey := fmt.Sprintf("%s/%s", deployment.OutputPrefix, currentFile.Name)
+			mu.Lock()
+			uploadedObjects = append(uploadedObjects, fullKey)
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	if err := group.Wait(); err != nil {
+		slog.Error("Upload failed", "error", err)
+
+		s.rollbackMinioUploads(ctx, uploadedObjects)
+		return err
 	}
 
 	_ = s.minioClient.RemoveObject(ctx, s.bucketName, objectName, minioGo.RemoveObjectOptions{})

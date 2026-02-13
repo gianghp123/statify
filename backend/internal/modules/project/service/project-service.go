@@ -103,13 +103,7 @@ func (s *ProjectService) transformProjectToDto(project *models.Project) (*respon
 
 	projectDto.URL = fmt.Sprintf("https://%s.%s", project.Subdomain, utils.GetEnv("DOMAIN", "statify.app"))
 
-	if len(project.Deployments) == 0 {
-		return projectDto, nil
-	}
-
-	latestDeployments := project.Deployments[0]
-
-	projectDto.Status = latestDeployments.Status
+	projectDto.Status = project.EffectiveStatus
 
 	return projectDto, nil
 }
